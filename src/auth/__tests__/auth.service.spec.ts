@@ -28,9 +28,14 @@ function mockRepo() {
     const opts = args.length === 1 ? args[0] : args[1];
     const where = opts?.where || {};
     return (
-      store.find((u) =>
-        where.username ? u.username === where.username : u.id === where.id,
-      ) || null
+      store.find((u) => {
+        if (where.username && u.username !== where.username) return false;
+        if (where.id && u.id !== where.id) return false;
+        if (where.role && u.role !== where.role) return false;
+        if (typeof where.builtIn === 'boolean' && u.builtIn !== where.builtIn)
+          return false;
+        return true;
+      }) || null
     );
   });
   repo.find = jest.fn(async () => store);
@@ -53,7 +58,14 @@ describe('AuthService', () => {
     refreshExpiresIn: '7d',
   } as JwtConfig;
   const cs = {
-    get: jest.fn().mockReturnValue(cfg),
+    get: jest.fn((key: string) => {
+      if (key === 'jwt') return cfg;
+      if (key === 'ADMIN_USERNAME') return 'admin';
+      if (key === 'ADMIN_PASSWORD') return 'admin';
+      if (key === 'USER_USERNAME') return 'user';
+      if (key === 'USER_PASSWORD') return 'user';
+      return undefined;
+    }),
   } as unknown as ConfigService;
   const repo = mockRepo();
 

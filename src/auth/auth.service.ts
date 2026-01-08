@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hashSync } from 'bcrypt-ts';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +25,8 @@ export interface Tokens {
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly repo: Repository<User>,
@@ -33,27 +35,99 @@ export class AuthService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.seedIfEmpty();
+    await this.ensureBuiltins();
   }
 
   async seedIfEmpty(): Promise<void> {
-    const count = await this.repo.count();
-    if (count > 0) return;
-    const admin = this.repo.create({
-      username: process.env.ADMIN_USERNAME || 'admin',
-      passwordHash: hashSync(process.env.ADMIN_PASSWORD || 'admin', 8),
+    await this.ensureBuiltins();
+  }
+
+  async ensureBuiltins(): Promise<void> {
+    const adminUsername = this.getEnvValue('ADMIN_USERNAME', 'admin');
+    const adminPassword = this.getEnvValue('ADMIN_PASSWORD', 'admin');
+    const userUsername = this.getEnvValue('USER_USERNAME', 'user');
+    const userPassword = this.getEnvValue('USER_PASSWORD', 'user');
+
+    await this.upsertBuiltInUser({
       role: 'admin',
+      username: adminUsername,
+      password: adminPassword,
       displayName: 'Admin',
-      builtIn: true,
     });
-    const user = this.repo.create({
-      username: process.env.USER_USERNAME || 'user',
-      passwordHash: hashSync(process.env.USER_PASSWORD || 'user', 8),
+    await this.upsertBuiltInUser({
       role: 'user',
+      username: userUsername,
+      password: userPassword,
       displayName: 'User',
-      builtIn: true,
     });
-    await this.repo.save([admin, user]);
+  }
+
+  private getEnvValue(key: string, fallback: string): string {
+    const value = this.configService.get<string>(key);
+    if (!value || typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  }
+
+  private async upsertBuiltInUser(input: {
+    role: 'admin' | 'user';
+    username: string;
+    password: string;
+    displayName: string;
+  }): Promise<void> {
+    const existing = await this.repo.findOne({
+      where: { role: input.role, builtIn: true },
+    });
+    if (!existing) {
+      const conflict = await this.repo.findOne({
+        where: { username: input.username },
+      });
+      if (conflict) {
+        throw new Error(
+          `built-in ${input.role} username conflicts with existing user`,
+        );
+      }
+      const created = this.repo.create({
+        username: input.username,
+        passwordHash: hashSync(input.password, 8),
+        role: input.role,
+        displayName: input.displayName,
+        builtIn: true,
+      });
+      await this.repo.save(created);
+      this.logger.log(`created built-in ${input.role} user`);
+      return;
+    }
+
+    let changed = false;
+    if (existing.username !== input.username) {
+      const conflict = await this.repo.findOne({
+        where: { username: input.username },
+      });
+      if (conflict && conflict.id !== existing.id) {
+        throw new Error(
+          `built-in ${input.role} username conflicts with existing user`,
+        );
+      }
+      existing.username = input.username;
+      changed = true;
+    }
+    if (!(await compare(input.password, existing.passwordHash))) {
+      existing.passwordHash = hashSync(input.password, 8);
+      changed = true;
+    }
+    if (existing.displayName !== input.displayName) {
+      existing.displayName = input.displayName;
+      changed = true;
+    }
+    if (!existing.builtIn) {
+      existing.builtIn = true;
+      changed = true;
+    }
+    if (changed) {
+      await this.repo.save(existing);
+      this.logger.log(`updated built-in ${input.role} user`);
+    }
   }
 
   async validateUser(username: string, password: string): Promise<UserPayload> {
