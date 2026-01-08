@@ -1,0 +1,2850 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "description": "用于最简存活验证与链路连通性确认。",
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "简单字符串",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "健康回声",
+        "tags": [
+          "Root"
+        ]
+      }
+    },
+    "/users": {
+      "get": {
+        "description": "返回所有用户基础信息，仅管理员可访问。",
+        "operationId": "UsersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "用户数组",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "用户列表（admin 可见）",
+        "tags": [
+          "Users"
+        ]
+      },
+      "post": {
+        "description": "创建普通用户或管理员账号，密码会进行哈希存储。",
+        "operationId": "UsersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建后的用户",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建用户（admin）",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "description": "按用户 ID 查询单个用户信息。",
+        "operationId": "UsersController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "用户 ID",
+            "schema": {
+              "example": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "用户",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查看用户",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/users/me": {
+      "delete": {
+        "description": "当前用户自销；内置账号禁止删除。",
+        "operationId": "UsersController_deleteSelf",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "被删除的用户",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "自销账号（内置账号不可销）",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "用于探测后端与数据库的基础可用性。",
+        "operationId": "HealthController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "健康状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "summary": "健康检查",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/servers/{serverName}/versions": {
+      "get": {
+        "description": "按站点名称列出历史版本，便于对比与回滚。",
+        "operationId": "VersionsController_list",
+        "parameters": [
+          {
+            "name": "serverName",
+            "required": true,
+            "in": "path",
+            "description": "站点名称（nginx server_name）",
+            "schema": {
+              "example": "example1.com",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "版本列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerPolicyVersionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查看站点策略版本列表",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/servers/{serverName}/versions/{versionNo}/rollback": {
+      "post": {
+        "description": "复制目标版本生成新版本，并记录审计日志。",
+        "operationId": "VersionsController_rollback",
+        "parameters": [
+          {
+            "name": "serverName",
+            "required": true,
+            "in": "path",
+            "description": "站点名称（nginx server_name）",
+            "schema": {
+              "example": "example1.com",
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionNo",
+            "required": true,
+            "in": "path",
+            "description": "目标版本号",
+            "schema": {
+              "example": 2,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "回滚后的新版本",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerPolicyVersionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "回滚到指定策略版本（生成新版本）",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/core-rules": {
+      "get": {
+        "description": "返回各核心规则集的最新版本，用于前端初始化展示。",
+        "operationId": "CoreRulesController_listAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "核心规则集列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoreRuleSetVersionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "列出所有核心规则集最新版本",
+        "tags": [
+          "CoreRules"
+        ]
+      }
+    },
+    "/core-rules/{coreName}/versions": {
+      "get": {
+        "description": "用于版本历史查询与回滚选择。",
+        "operationId": "CoreRulesController_listByName",
+        "parameters": [
+          {
+            "name": "coreName",
+            "required": true,
+            "in": "path",
+            "description": "核心规则集名称",
+            "schema": {
+              "example": "core_sqli_rules",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "版本列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoreRuleSetVersionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查看指定核心规则集的历史版本",
+        "tags": [
+          "CoreRules"
+        ]
+      },
+      "post": {
+        "description": "提交规则内容并生成新版本（从 v1.1 起可编辑）。",
+        "operationId": "CoreRulesController_create",
+        "parameters": [
+          {
+            "name": "coreName",
+            "required": true,
+            "in": "path",
+            "description": "核心规则集名称",
+            "schema": {
+              "example": "core_sqli_rules",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCoreRuleSetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新版本信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreRuleSetVersionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建核心规则集新版本",
+        "tags": [
+          "CoreRules"
+        ]
+      }
+    },
+    "/core-rules/{coreName}/versions/{versionNo}/rollback": {
+      "post": {
+        "description": "复制目标版本生成新版本，保留历史。",
+        "operationId": "CoreRulesController_rollback",
+        "parameters": [
+          {
+            "name": "coreName",
+            "required": true,
+            "in": "path",
+            "description": "核心规则集名称",
+            "schema": {
+              "example": "core_sqli_rules",
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionNo",
+            "required": true,
+            "in": "path",
+            "description": "目标版本号",
+            "schema": {
+              "example": 2,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackCoreRuleSetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "回滚后的新版本",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreRuleSetVersionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "回滚核心规则集到指定版本（生成新版本）",
+        "tags": [
+          "CoreRules"
+        ]
+      }
+    },
+    "/core-rules/{coreName}/restore-factory": {
+      "post": {
+        "description": "按出厂基线回滚并生成新版本。",
+        "operationId": "CoreRulesController_restoreFactory",
+        "parameters": [
+          {
+            "name": "coreName",
+            "required": true,
+            "in": "path",
+            "description": "核心规则集名称",
+            "schema": {
+              "example": "core_sqli_rules",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackCoreRuleSetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "回滚后的新版本（出厂）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreRuleSetVersionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "恢复核心规则集到出厂版本 v1.0",
+        "tags": [
+          "CoreRules"
+        ]
+      }
+    },
+    "/templates": {
+      "get": {
+        "description": "返回模板规则的最新版本，用于前端选择启用。",
+        "operationId": "TemplatesController_listAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "模板列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateRuleSetVersionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "列出所有模板最新版本",
+        "tags": [
+          "Templates"
+        ]
+      }
+    },
+    "/templates/{templateName}/versions": {
+      "get": {
+        "description": "用于模板版本回溯与回滚。",
+        "operationId": "TemplatesController_listByName",
+        "parameters": [
+          {
+            "name": "templateName",
+            "required": true,
+            "in": "path",
+            "description": "模板名称",
+            "schema": {
+              "example": "ip_whitelist",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "版本列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateRuleSetVersionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查看指定模板的历史版本",
+        "tags": [
+          "Templates"
+        ]
+      },
+      "post": {
+        "description": "提交模板规则并生成新版本。",
+        "operationId": "TemplatesController_create",
+        "parameters": [
+          {
+            "name": "templateName",
+            "required": true,
+            "in": "path",
+            "description": "模板名称",
+            "schema": {
+              "example": "ip_whitelist",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新版本信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateRuleSetVersionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "创建模板新版本",
+        "tags": [
+          "Templates"
+        ]
+      }
+    },
+    "/templates/{templateName}/versions/{versionNo}/rollback": {
+      "post": {
+        "description": "复制目标版本生成新版本，保留历史。",
+        "operationId": "TemplatesController_rollback",
+        "parameters": [
+          {
+            "name": "templateName",
+            "required": true,
+            "in": "path",
+            "description": "模板名称",
+            "schema": {
+              "example": "ip_whitelist",
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionNo",
+            "required": true,
+            "in": "path",
+            "description": "目标版本号",
+            "schema": {
+              "example": 2,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "回滚后的新版本",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateRuleSetVersionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "回滚模板到指定版本（生成新版本）",
+        "tags": [
+          "Templates"
+        ]
+      }
+    },
+    "/audit/ops/logs": {
+      "get": {
+        "description": "按时间范围/操作者/动作类型等条件查询审计日志。",
+        "operationId": "AuditController_list",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": false,
+            "in": "query",
+            "description": "时间范围，如 24h",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "required": false,
+            "in": "query",
+            "description": "操作者",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionType",
+            "required": false,
+            "in": "query",
+            "description": "动作类型",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target",
+            "required": false,
+            "in": "query",
+            "description": "目标名称",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "状态",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "条数，默认50",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "审计列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OpsAuditLogResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询操作审计日志",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/audit/ops/logs/{id}": {
+      "get": {
+        "description": "返回单条审计日志详情（含 steps/rollbackSteps 摘要）。",
+        "operationId": "AuditController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "审计日志 ID",
+            "schema": {
+              "example": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "审计详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsAuditLogResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "审计详情",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/servers/{serverName}/publish": {
+      "post": {
+        "description": "组合策略 JSON 并写入规则文件，更新 nginx.conf 后执行 `nginx -t -q` 与 reload；失败会回滚并返回步骤日志。",
+        "operationId": "RulesController_publish",
+        "parameters": [
+          {
+            "name": "serverName",
+            "required": true,
+            "in": "path",
+            "description": "站点名称（nginx server_name）",
+            "schema": {
+              "example": "example1.com",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发布结果（结构化 steps 与 publishLog）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishPolicyResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "下发并创建新策略版本（生成规则文件 → 更新 nginx.conf → 校验 → reload）",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/servers/{serverName}/runtime": {
+      "put": {
+        "description": "基于最新策略生成新版本并更新 nginx.conf，失败时回滚；返回结构化步骤输出。",
+        "operationId": "RulesController_updateRuntime",
+        "parameters": [
+          {
+            "name": "serverName",
+            "required": true,
+            "in": "path",
+            "description": "站点名称（nginx server_name）",
+            "schema": {
+              "example": "example1.com",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRuntimeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "运行态更新结果（steps/rollbackSteps）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeUpdateResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "修改运行态开关（wafEnabled/dynamicBlock/defaultAction），带锁与失败回滚",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/logs/loki/waf/logs": {
+      "get": {
+        "description": "按时间范围与过滤条件查询审计日志。",
+        "operationId": "LokiController_getWafLogs",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": true,
+            "in": "query",
+            "description": "时间范围，如 5m/1h/24h",
+            "schema": {
+              "example": "1h",
+              "type": "string"
+            }
+          },
+          {
+            "name": "server",
+            "required": false,
+            "in": "query",
+            "description": "过滤的 serverName",
+            "schema": {
+              "example": "example.com",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "最大条数（1-1000）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "example": 200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "过滤动作（ALLOW/BLOCK 等）",
+            "schema": {
+              "example": "BLOCK",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ruleId",
+            "required": false,
+            "in": "query",
+            "description": "过滤规则 ID",
+            "schema": {
+              "example": "1001",
+              "type": "string"
+            }
+          },
+          {
+            "name": "clientIp",
+            "required": false,
+            "in": "query",
+            "description": "过滤客户端 IP",
+            "schema": {
+              "example": "1.2.3.4",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loki 查询结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "查询 WAF 审计日志（Loki）",
+        "tags": [
+          "Loki"
+        ]
+      }
+    },
+    "/logs/loki/waf/stats": {
+      "get": {
+        "description": "返回拦截数、攻击类型分布等统计聚合结果。",
+        "operationId": "LokiController_getWafStats",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": true,
+            "in": "query",
+            "description": "时间范围，如 5m/1h/24h",
+            "schema": {
+              "example": "1h",
+              "type": "string"
+            }
+          },
+          {
+            "name": "server",
+            "required": false,
+            "in": "query",
+            "description": "过滤的 serverName",
+            "schema": {
+              "example": "example.com",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "最大条数（1-1000）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "example": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "统计结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取 WAF 统计（Loki 查询结果）",
+        "tags": [
+          "Loki"
+        ]
+      }
+    },
+    "/logs/loki/access/stats": {
+      "get": {
+        "description": "返回 PV/UV/QPS 等访问指标统计。",
+        "operationId": "LokiController_getAccessStats",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": true,
+            "in": "query",
+            "description": "时间范围，如 5m/1h/24h",
+            "schema": {
+              "example": "1h",
+              "type": "string"
+            }
+          },
+          {
+            "name": "server",
+            "required": false,
+            "in": "query",
+            "description": "过滤的 serverName",
+            "schema": {
+              "example": "example.com",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "最大条数（1-1000）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "example": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "统计结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "访问统计（Loki 查询结果）",
+        "tags": [
+          "Loki"
+        ]
+      }
+    },
+    "/logs/loki/access/timeseries": {
+      "get": {
+        "description": "返回指定时间范围内的时序折线数据。",
+        "operationId": "LokiController_getAccessTimeseries",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": true,
+            "in": "query",
+            "description": "时间范围，如 5m/1h/24h",
+            "schema": {
+              "example": "1h",
+              "type": "string"
+            }
+          },
+          {
+            "name": "server",
+            "required": false,
+            "in": "query",
+            "description": "过滤的 serverName",
+            "schema": {
+              "example": "example.com",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "最大条数（1-1000）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "example": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "时序结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "访问时序（Loki 查询结果）",
+        "tags": [
+          "Loki"
+        ]
+      }
+    },
+    "/logs/loki/geo/world": {
+      "get": {
+        "description": "返回国家级访问/拦截地理聚合。",
+        "operationId": "LokiController_geoWorld",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": true,
+            "in": "query",
+            "description": "时间范围，如 5m/1h/24h",
+            "schema": {
+              "example": "1h",
+              "type": "string"
+            }
+          },
+          {
+            "name": "server",
+            "required": false,
+            "in": "query",
+            "description": "过滤的 serverName",
+            "schema": {
+              "example": "example.com",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "最大条数（1-1000）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "example": 200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "mode",
+            "required": true,
+            "in": "query",
+            "description": "模式：visit=访问量，block=拦截量",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "visit",
+                "block"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "地理聚合结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "世界地图聚合（Loki 查询结果）",
+        "tags": [
+          "Loki"
+        ]
+      }
+    },
+    "/logs/loki/geo/china": {
+      "get": {
+        "description": "返回省市级访问/拦截地理聚合。",
+        "operationId": "LokiController_geoChina",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": true,
+            "in": "query",
+            "description": "时间范围，如 5m/1h/24h",
+            "schema": {
+              "example": "1h",
+              "type": "string"
+            }
+          },
+          {
+            "name": "server",
+            "required": false,
+            "in": "query",
+            "description": "过滤的 serverName",
+            "schema": {
+              "example": "example.com",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "最大条数（1-1000）",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "example": 200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "mode",
+            "required": true,
+            "in": "query",
+            "description": "模式：visit=访问量，block=拦截量",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "visit",
+                "block"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "地理聚合结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "中国地图聚合（Loki 查询结果）",
+        "tags": [
+          "Loki"
+        ]
+      }
+    },
+    "/reports/waf": {
+      "get": {
+        "description": "返回防护报告摘要数据，用于前端图表渲染。",
+        "operationId": "ReportsController_getReport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "报告摘要",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WafReportSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取防护报告（JSON 摘要）",
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/reports/waf/export": {
+      "get": {
+        "description": "导出当前报告摘要的 PDF 文件。",
+        "operationId": "ReportsController_exportPdf",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "PDF 文件",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "导出防护报告 PDF",
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "description": "返回 access/refresh 双 token 与用户信息，用于后续受保护接口的 Bearer 鉴权。",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "token 信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "登录获取 access/refresh token（内置 demo 用户：admin/admin、user/user；可通过 env 覆盖）",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "refreshToken 有效时颁发新 token；用于无感续期。",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新的 token 信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "使用 refreshToken 换取新的 access/refresh token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "description": "返回当前登录用户的基础信息与角色。",
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取当前用户信息（需 Bearer Token）",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/alerts/config": {
+      "get": {
+        "description": "读取当前告警开关、收件人列表与阈值配置。",
+        "operationId": "AlertsController_getConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "告警配置",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取告警配置",
+        "tags": [
+          "Alerts"
+        ]
+      },
+      "put": {
+        "description": "更新告警开关、收件人列表与阈值配置，并记录审计。",
+        "operationId": "AlertsController_update",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAlertConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新后的告警配置",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新告警配置",
+        "tags": [
+          "Alerts"
+        ]
+      }
+    },
+    "/alerts/send": {
+      "post": {
+        "description": "根据当前配置发送告警邮件，写入发送记录与审计。",
+        "operationId": "AlertsController_send",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendAlertDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发送结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendAlertResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "手动触发告警（演练/测试）",
+        "tags": [
+          "Alerts"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "WAF 控制面 API",
+    "description": "v1 接口文档",
+    "version": "v1",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "用户 ID",
+            "example": 1
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "admin"
+          },
+          "role": {
+            "type": "string",
+            "description": "角色",
+            "enum": [
+              "admin",
+              "user"
+            ]
+          },
+          "displayName": {
+            "type": "string",
+            "description": "显示名称",
+            "example": "Admin"
+          },
+          "builtIn": {
+            "type": "boolean",
+            "description": "是否内置账号",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "role",
+          "builtIn"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "alice"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "123456"
+          },
+          "role": {
+            "type": "string",
+            "description": "角色",
+            "enum": [
+              "admin",
+              "user"
+            ]
+          },
+          "displayName": {
+            "type": "string",
+            "description": "显示名称",
+            "example": "Alice"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "role"
+        ]
+      },
+      "ServerPolicyVersionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "版本 ID",
+            "example": 12
+          },
+          "serverName": {
+            "type": "string",
+            "description": "站点名称",
+            "example": "example.com"
+          },
+          "versionNo": {
+            "type": "number",
+            "description": "版本号",
+            "example": 3
+          },
+          "policyJson": {
+            "type": "object",
+            "description": "策略 JSON（包含 meta/extends/rules 等）",
+            "additionalProperties": true
+          },
+          "enabledCoreRules": {
+            "description": "启用的 core 规则集名称",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabledTemplates": {
+            "description": "启用的模板名称",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "description": "状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED",
+              "ROLLED_BACK"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "备注"
+          },
+          "publishLog": {
+            "type": "string",
+            "description": "发布日志摘要"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "创建人",
+            "example": "admin"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间（ISO）"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "更新时间（ISO）"
+          }
+        },
+        "required": [
+          "id",
+          "serverName",
+          "versionNo",
+          "policyJson",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "RollbackPolicyDto": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        }
+      },
+      "CoreRuleSetVersionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "版本 ID",
+            "example": 12
+          },
+          "coreName": {
+            "type": "string",
+            "description": "核心规则集名称",
+            "example": "core_sqli_rules"
+          },
+          "versionNo": {
+            "type": "number",
+            "description": "版本号",
+            "example": 3
+          },
+          "rulesJson": {
+            "type": "object",
+            "description": "核心规则 JSON",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "description": "状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED",
+              "ROLLED_BACK"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "备注"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "创建人",
+            "example": "admin"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间（ISO）"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "更新时间（ISO）"
+          }
+        },
+        "required": [
+          "id",
+          "coreName",
+          "versionNo",
+          "rulesJson",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "RuleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "规则 ID（整数）",
+            "example": 1001
+          },
+          "target": {
+            "type": "string",
+            "description": "匹配目标（可为单个或数组）",
+            "example": "URI",
+            "enum": [
+              "URI",
+              "ARGS_COMBINED",
+              "BODY",
+              "HEADER",
+              "CLIENT_IP",
+              "ALL_PARAMS"
+            ]
+          },
+          "match": {
+            "type": "string",
+            "description": "匹配方式",
+            "example": "CONTAINS",
+            "enum": [
+              "CONTAINS",
+              "EXACT",
+              "REGEX",
+              "CIDR"
+            ]
+          },
+          "pattern": {
+            "type": "object",
+            "description": "匹配模式（可为单个或数组）",
+            "example": "/admin"
+          },
+          "action": {
+            "type": "string",
+            "description": "动作",
+            "example": "DENY",
+            "enum": [
+              "DENY",
+              "LOG",
+              "BYPASS"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "description": "扣分（>=0，仅动态信誉场景使用）",
+            "example": 5
+          },
+          "caseless": {
+            "type": "boolean",
+            "description": "忽略大小写",
+            "example": true
+          },
+          "negate": {
+            "type": "boolean",
+            "description": "取反（negate）",
+            "example": false
+          },
+          "headerName": {
+            "type": "string",
+            "description": "当 target=HEADER 时必填，指定 header 名称",
+            "example": "User-Agent"
+          },
+          "tags": {
+            "description": "规则标签（用于攻击类型归类）",
+            "example": [
+              "sqli"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "target",
+          "match",
+          "pattern",
+          "action"
+        ]
+      },
+      "CreateCoreRuleSetDto": {
+        "type": "object",
+        "properties": {
+          "coreName": {
+            "type": "string",
+            "description": "核心规则集名称",
+            "example": "core_sqli_rules"
+          },
+          "rules": {
+            "description": "规则列表（friendly JSON 结构）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleDto"
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "备注",
+            "example": "补充 SQLi 规则"
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        },
+        "required": [
+          "coreName",
+          "rules"
+        ]
+      },
+      "RollbackCoreRuleSetDto": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        }
+      },
+      "TemplateRuleSetVersionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "版本 ID",
+            "example": 12
+          },
+          "templateName": {
+            "type": "string",
+            "description": "模板名称",
+            "example": "ip_whitelist"
+          },
+          "versionNo": {
+            "type": "number",
+            "description": "版本号",
+            "example": 3
+          },
+          "rulesJson": {
+            "type": "object",
+            "description": "模板规则 JSON",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "description": "状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED",
+              "ROLLED_BACK"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "备注"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "创建人",
+            "example": "admin"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间（ISO）"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "更新时间（ISO）"
+          }
+        },
+        "required": [
+          "id",
+          "templateName",
+          "versionNo",
+          "rulesJson",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateTemplateDto": {
+        "type": "object",
+        "properties": {
+          "templateName": {
+            "type": "string",
+            "description": "模板名称",
+            "example": "ip_whitelist"
+          },
+          "rules": {
+            "description": "规则列表（friendly JSON 结构）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleDto"
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "备注",
+            "example": "自定义 IP 白名单模板"
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        },
+        "required": [
+          "templateName",
+          "rules"
+        ]
+      },
+      "RollbackTemplateDto": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        }
+      },
+      "OpsAuditLogResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "日志 ID",
+            "example": 100
+          },
+          "actionType": {
+            "type": "string",
+            "description": "动作类型",
+            "example": "PUBLISH_POLICY"
+          },
+          "targetType": {
+            "type": "string",
+            "description": "目标类型",
+            "example": "server"
+          },
+          "targetName": {
+            "type": "string",
+            "description": "目标名称",
+            "example": "example.com"
+          },
+          "status": {
+            "type": "string",
+            "description": "执行状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED"
+            ]
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "admin"
+          },
+          "note": {
+            "type": "string",
+            "description": "备注"
+          },
+          "detail": {
+            "type": "object",
+            "description": "细节（steps/rollbackSteps 等摘要）",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间（ISO）"
+          }
+        },
+        "required": [
+          "id",
+          "actionType",
+          "targetType",
+          "status",
+          "createdAt"
+        ]
+      },
+      "PublishPolicyDto": {
+        "type": "object",
+        "properties": {
+          "enabledCoreRules": {
+            "description": "启用的核心规则集名称列表（一级引用）",
+            "example": [
+              "core_sqli_rules"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabledTemplates": {
+            "description": "启用的模板名称列表（一级引用）",
+            "example": [
+              "ip_whitelist"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rules": {
+            "description": "自定义规则数组（按 friendly-waf-json-spec 子集，必填字段：id/target/match/pattern/action）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleDto"
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "版本备注",
+            "example": "上线核心规则+自定义IP黑名单"
+          },
+          "dynamicBlockBaseScore": {
+            "type": "number",
+            "description": "动态封禁基础得分（policies.dynamicBlock.baseAccessScore）",
+            "example": 1,
+            "minimum": 0
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "仅测试，不落盘/不reload",
+            "default": false
+          },
+          "baseVersionId": {
+            "type": "number",
+            "description": "基线版本号（用于并发冲突校验）",
+            "minimum": 1,
+            "example": 12
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        },
+        "required": [
+          "enabledCoreRules",
+          "enabledTemplates"
+        ]
+      },
+      "PipelineStepResultDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "步骤标识",
+            "enum": [
+              "composePolicy",
+              "writePolicyFile",
+              "updateNginxConf",
+              "nginxTest",
+              "nginxReload",
+              "restoreNginxConf"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "步骤状态",
+            "enum": [
+              "SUCCESS",
+              "WARN",
+              "FAILED",
+              "SKIPPED",
+              "PENDING"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "提示/摘要信息"
+          },
+          "stdout": {
+            "type": "string",
+            "description": "标准输出"
+          },
+          "stderr": {
+            "type": "string",
+            "description": "标准错误"
+          }
+        },
+        "required": [
+          "key",
+          "status"
+        ]
+      },
+      "PublishPolicyResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "发布状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "description": "新版本号（失败时可能为空）"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "是否为 dryRun",
+            "example": false
+          },
+          "publishLog": {
+            "type": "string",
+            "description": "发布日志摘要（含步骤输出）"
+          },
+          "steps": {
+            "description": "执行步骤",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineStepResultDto"
+            }
+          },
+          "rollbackSteps": {
+            "description": "回滚步骤（若有）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineStepResultDto"
+            }
+          },
+          "error": {
+            "type": "string",
+            "description": "失败原因（仅失败时）"
+          }
+        },
+        "required": [
+          "status",
+          "dryRun",
+          "publishLog",
+          "steps",
+          "rollbackSteps"
+        ]
+      },
+      "UpdateRuntimeDto": {
+        "type": "object",
+        "properties": {
+          "wafEnabled": {
+            "type": "boolean",
+            "description": "是否启用 WAF（入口开关，true=启用，false=旁路）",
+            "example": true
+          },
+          "dynamicBlockEnabled": {
+            "type": "boolean",
+            "description": "是否启用动态封禁（true=打开动态信誉/封禁）",
+            "example": true
+          },
+          "defaultAction": {
+            "type": "string",
+            "description": "默认动作（DENY/BYPASS/ALLOW），空则保持现状",
+            "example": "DENY"
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "ops-user"
+          },
+          "note": {
+            "type": "string",
+            "description": "备注",
+            "example": "紧急旁路 30 分钟"
+          }
+        }
+      },
+      "RuntimeUpdateResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "发布状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED"
+            ]
+          },
+          "version": {
+            "type": "number",
+            "description": "新版本号（失败时可能为空）"
+          },
+          "publishLog": {
+            "type": "string",
+            "description": "发布日志摘要（含步骤输出）"
+          },
+          "steps": {
+            "description": "执行步骤",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineStepResultDto"
+            }
+          },
+          "rollbackSteps": {
+            "description": "回滚步骤（若有）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineStepResultDto"
+            }
+          },
+          "error": {
+            "type": "string",
+            "description": "失败原因（仅失败时）"
+          }
+        },
+        "required": [
+          "status",
+          "publishLog",
+          "steps",
+          "rollbackSteps"
+        ]
+      },
+      "WafReportKpiDto": {
+        "type": "object",
+        "properties": {
+          "requests": {
+            "type": "number",
+            "description": "请求总数"
+          },
+          "blocks": {
+            "type": "number",
+            "description": "拦截总数"
+          },
+          "uniqueIps": {
+            "type": "number",
+            "description": "独立访客 IP 数"
+          },
+          "attackIps": {
+            "type": "number",
+            "description": "独立攻击 IP 数"
+          },
+          "blockRate": {
+            "type": "number",
+            "description": "拦截率（0-1 小数）"
+          }
+        },
+        "required": [
+          "requests",
+          "blocks",
+          "uniqueIps",
+          "attackIps",
+          "blockRate"
+        ]
+      },
+      "TimeSeriesPointDto": {
+        "type": "object",
+        "properties": {
+          "ts": {
+            "type": "number",
+            "description": "时间戳（ms）"
+          },
+          "requests": {
+            "type": "number",
+            "description": "请求数"
+          },
+          "blocks": {
+            "type": "number",
+            "description": "拦截数"
+          }
+        },
+        "required": [
+          "ts",
+          "requests",
+          "blocks"
+        ]
+      },
+      "AttackBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "攻击类型",
+            "example": "SQL_INJECTION"
+          },
+          "count": {
+            "type": "number",
+            "description": "数量"
+          }
+        },
+        "required": [
+          "type",
+          "count"
+        ]
+      },
+      "GeoEntryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "区域名称"
+          },
+          "count": {
+            "type": "number",
+            "description": "数量"
+          }
+        },
+        "required": [
+          "name",
+          "count"
+        ]
+      },
+      "GeoSectionDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "模式：visit | block",
+            "example": "visit"
+          },
+          "scope": {
+            "type": "string",
+            "description": "范围：world | china",
+            "example": "world"
+          },
+          "heatmap": {
+            "description": "热点数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          },
+          "top": {
+            "description": "Top 榜单",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          }
+        },
+        "required": [
+          "mode",
+          "scope",
+          "heatmap",
+          "top"
+        ]
+      },
+      "WafReportSummaryDto": {
+        "type": "object",
+        "properties": {
+          "timeRange": {
+            "type": "string",
+            "description": "统计时间范围，如 5m/1h/24h",
+            "example": "24h"
+          },
+          "generatedAt": {
+            "type": "string",
+            "description": "生成时间 ISO 字符串",
+            "example": "2026-01-03T01:23:45Z"
+          },
+          "kpis": {
+            "description": "核心指标",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WafReportKpiDto"
+              }
+            ]
+          },
+          "timeline": {
+            "description": "请求/拦截时序（用于折线图）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeSeriesPointDto"
+            }
+          },
+          "attackTypes": {
+            "description": "攻击类型分布",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttackBreakdownDto"
+            }
+          },
+          "geoWorld": {
+            "description": "世界热点",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GeoSectionDto"
+              }
+            ]
+          },
+          "geoChina": {
+            "description": "国内热点",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GeoSectionDto"
+              }
+            ]
+          },
+          "topUrls": {
+            "description": "高频 URL 榜单",
+            "example": [
+              {
+                "name": "/login",
+                "count": 120
+              },
+              {
+                "name": "/api/upload",
+                "count": 35
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          },
+          "topAttackIps": {
+            "description": "高频攻击 IP 榜单",
+            "example": [
+              {
+                "name": "1.1.1.1",
+                "count": 30
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          },
+          "topBlockedUrls": {
+            "description": "高频拦截 URL 榜单",
+            "example": [
+              {
+                "name": "/admin",
+                "count": 12
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          },
+          "topBlockedIps": {
+            "description": "高频拦截 IP 榜单",
+            "example": [
+              {
+                "name": "2.2.2.2",
+                "count": 7
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          }
+        },
+        "required": [
+          "timeRange",
+          "generatedAt",
+          "kpis",
+          "timeline",
+          "attackTypes",
+          "geoWorld",
+          "geoChina",
+          "topUrls",
+          "topAttackIps",
+          "topBlockedUrls",
+          "topBlockedIps"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "用户 ID",
+            "example": 1
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "admin"
+          },
+          "role": {
+            "type": "string",
+            "description": "角色",
+            "enum": [
+              "admin",
+              "user"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "role"
+        ]
+      },
+      "TokenResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Access Token（JWT）"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh Token（JWT）"
+          },
+          "expiresIn": {
+            "type": "string",
+            "description": "Access Token 过期时间（如 15m）"
+          },
+          "refreshExpiresIn": {
+            "type": "string",
+            "description": "Refresh Token 过期时间（如 7d）"
+          },
+          "user": {
+            "description": "用户信息",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuthUserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "refreshExpiresIn",
+          "user"
+        ]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "刷新令牌",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "AlertThresholdsDto": {
+        "type": "object",
+        "properties": {
+          "blockRate": {
+            "type": "number",
+            "description": "拦截率阈值，0-1 之间小数",
+            "example": 0.5
+          },
+          "qps": {
+            "type": "number",
+            "description": "QPS 阈值",
+            "example": 200
+          },
+          "attackTypeCounts": {
+            "type": "object",
+            "description": "按攻击类型的计数阈值，key 为攻击类型",
+            "example": {
+              "SQL_INJECTION": 10,
+              "XSS": 5
+            }
+          }
+        }
+      },
+      "AlertConfigResponse": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "是否开启告警",
+            "example": true
+          },
+          "emails": {
+            "description": "收件人邮箱列表",
+            "example": [
+              "ops@example.com"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "thresholds": {
+            "description": "阈值配置",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AlertThresholdsDto"
+              }
+            ]
+          },
+          "updatedBy": {
+            "type": "string",
+            "description": "最近更新人",
+            "example": "admin"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "最近更新时间",
+            "example": "2026-01-03T01:23:45Z"
+          }
+        },
+        "required": [
+          "enabled",
+          "emails",
+          "thresholds"
+        ]
+      },
+      "UpdateAlertConfigDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "告警开关",
+            "default": true
+          },
+          "emails": {
+            "description": "收件人邮箱列表",
+            "example": [
+              "ops@example.com"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "thresholds": {
+            "type": "object",
+            "description": "触发阈值（拦截率/QPS/攻击类型计数）",
+            "example": {
+              "blockRate": 0.5,
+              "qps": 200,
+              "attackTypeCounts": {
+                "SQL_INJECTION": 10
+              }
+            }
+          }
+        }
+      },
+      "SendAlertDto": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "告警标题",
+            "example": "演练告警：高拦截率"
+          },
+          "content": {
+            "type": "string",
+            "description": "告警内容",
+            "example": "近5分钟拦截率 > 50%"
+          }
+        },
+        "required": [
+          "subject"
+        ]
+      },
+      "SendAlertResponse": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "boolean",
+            "description": "是否已发送（需开启且有收件人）"
+          },
+          "subject": {
+            "type": "string",
+            "description": "标题"
+          },
+          "content": {
+            "type": "string",
+            "description": "正文"
+          },
+          "recipients": {
+            "description": "收件人列表",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sentAt": {
+            "type": "string",
+            "description": "发送时间 ISO 字符串"
+          },
+          "error": {
+            "type": "string",
+            "description": "失败原因（未开启、无收件人或 SMTP 错误）"
+          }
+        },
+        "required": [
+          "sent",
+          "subject",
+          "content",
+          "recipients",
+          "sentAt"
+        ]
+      }
+    }
+  }
+}
