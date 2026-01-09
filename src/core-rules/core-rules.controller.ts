@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { CoreRulesService } from './core-rules.service';
 import {
   CreateCoreRuleSetDto,
@@ -7,6 +15,7 @@ import {
 import { FACTORY_VERSION_NO } from '../common/rules/consts';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -105,7 +114,7 @@ export class CoreRulesController {
     description: '核心规则集名称',
     example: 'core_sqli_rules',
   })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: '新版本信息',
     type: CoreRuleSetVersionResponse,
   })
@@ -122,6 +131,7 @@ export class CoreRulesController {
   }
 
   @Post(':coreName/versions/:versionNo/rollback')
+  @HttpCode(200)
   @Roles('admin')
   @ApiOperation({
     summary: '回滚核心规则集到指定版本（生成新版本）',
@@ -150,6 +160,7 @@ export class CoreRulesController {
   }
 
   @Post(':coreName/restore-factory')
+  @HttpCode(200)
   @Roles('admin')
   @ApiOperation({
     summary: '恢复核心规则集到出厂版本 v1.0',

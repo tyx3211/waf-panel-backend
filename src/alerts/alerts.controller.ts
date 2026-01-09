@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Post,
   Put,
   Req,
@@ -119,6 +120,7 @@ export class AlertsController {
   }
 
   @Post('send')
+  @HttpCode(200)
   @Roles('admin')
   @ApiOperation({
     summary: '手动触发告警（演练/测试）',

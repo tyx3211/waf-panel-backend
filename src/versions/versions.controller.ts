@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { PolicyVersionService } from './policy-version.service';
 import { ServerPolicyVersion } from '../entities/server-policy-version.entity';
 import {
@@ -102,6 +110,7 @@ export class VersionsController {
   }
 
   @Post(':serverName/versions/:versionNo/rollback')
+  @HttpCode(200)
   @Roles('admin')
   @ApiOperation({
     summary: '回滚到指定策略版本（生成新版本）',

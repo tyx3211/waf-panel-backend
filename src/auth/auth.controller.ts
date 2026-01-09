@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -46,6 +46,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('login')
+  @HttpCode(200)
   @ApiOperation({
     summary:
       '登录获取 access/refresh token（内置 demo 用户：admin/admin、user/user；可通过 env 覆盖）',
@@ -60,6 +61,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @HttpCode(200)
   @ApiOperation({
     summary: '使用 refreshToken 换取新的 access/refresh token',
     description: 'refreshToken 有效时颁发新 token；用于无感续期。',

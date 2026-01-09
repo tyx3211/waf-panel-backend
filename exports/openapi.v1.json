@@ -69,7 +69,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "创建后的用户",
             "content": {
               "application/json": {
@@ -381,7 +381,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "新版本信息",
             "content": {
               "application/json": {
@@ -609,7 +609,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "新版本信息",
             "content": {
               "application/json": {

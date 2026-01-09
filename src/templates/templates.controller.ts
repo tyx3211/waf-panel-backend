@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { TemplatesService } from './templates.service';
 import {
   CreateTemplateDto,
@@ -6,6 +14,7 @@ import {
 } from './dto/create-template.dto';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -104,7 +113,7 @@ export class TemplatesController {
     description: '模板名称',
     example: 'ip_whitelist',
   })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: '新版本信息',
     type: TemplateRuleSetVersionResponse,
   })
@@ -121,6 +130,7 @@ export class TemplatesController {
   }
 
   @Post(':templateName/versions/:versionNo/rollback')
+  @HttpCode(200)
   @Roles('admin')
   @ApiOperation({
     summary: '回滚模板到指定版本（生成新版本）',

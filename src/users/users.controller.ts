@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -61,7 +62,7 @@ export class UsersController {
     summary: '创建用户（admin）',
     description: '创建普通用户或管理员账号，密码会进行哈希存储。',
   })
-  @ApiOkResponse({ description: '创建后的用户', type: UserResponse })
+  @ApiCreatedResponse({ description: '创建后的用户', type: UserResponse })
   create(@Body() dto: CreateUserDto) {
     return this.auth.createUser(dto);
   }
