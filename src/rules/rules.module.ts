@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { LocksModule } from '../common/locks/locks.module';
 import { OpsAuditModule } from '../ops-audit/ops-audit.module';
 import { VersionsModule } from '../versions/versions.module';
@@ -18,7 +18,7 @@ import { TemplateRuleSetVersion } from '../entities/template-rule-set-version.en
     ConfigModule.forFeature(wafConfig),
     LocksModule,
     OpsAuditModule,
-    VersionsModule,
+    forwardRef(() => VersionsModule),
     TypeOrmModule.forFeature([CoreRuleSetVersion, TemplateRuleSetVersion]),
   ],
   providers: [
@@ -28,5 +28,6 @@ import { TemplateRuleSetVersion } from '../entities/template-rule-set-version.en
     NginxConfigService,
   ],
   controllers: [RulesController],
+  exports: [PolicyPublishService],
 })
 export class RulesModule {}

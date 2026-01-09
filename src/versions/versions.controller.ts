@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PolicyVersionService } from './policy-version.service';
+import { PolicyPublishService } from '../rules/policy-publish.service';
 import { ServerPolicyVersion } from '../entities/server-policy-version.entity';
 import {
   ApiBearerAuth,
@@ -86,7 +87,10 @@ class ServerPolicyVersionResponse {
 @ApiBearerAuth()
 @Controller('servers')
 export class VersionsController {
-  constructor(private readonly service: PolicyVersionService) {}
+  constructor(
+    private readonly service: PolicyVersionService,
+    private readonly publishService: PolicyPublishService,
+  ) {}
 
   @Get(':serverName/versions')
   @Roles('admin', 'user')
@@ -114,7 +118,7 @@ export class VersionsController {
   @Roles('admin')
   @ApiOperation({
     summary: '回滚到指定策略版本（生成新版本）',
-    description: '复制目标版本生成新版本，并记录审计日志。',
+    description: '复制目标版本生成新版本，并执行 Nginx 下发。',
   })
   @ApiParam({
     name: 'serverName',
@@ -127,14 +131,17 @@ export class VersionsController {
     example: 2,
   })
   @ApiOkResponse({
-    description: '回滚后的新版本',
-    type: ServerPolicyVersionResponse,
+    description: '发布结果（含步骤）',
   })
   async rollback(
     @Param('serverName') serverName: string,
     @Param('versionNo') versionNo: string,
     @Body() dto: RollbackPolicyDto,
   ) {
-    return this.service.rollback(serverName, Number(versionNo), dto.actor);
+    return this.publishService.rollbackToVersion(
+      serverName,
+      Number(versionNo),
+      dto.actor,
+    );
   }
 }

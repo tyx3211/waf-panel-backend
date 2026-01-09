@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/http/response.interceptor';
+import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
 import { AllExceptionsFilter } from './common/http/http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { applyEnvelope } from './common/http/openapi-envelope';
@@ -16,7 +17,7 @@ async function bootstrap() {
       forbidUnknownValues: false,
     }),
   );
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  app.useGlobalInterceptors(new ResponseInterceptor(), new PerformanceInterceptor());
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const config = new DocumentBuilder()

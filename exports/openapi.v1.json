@@ -291,6 +291,26 @@
             }
           },
           {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "开始时间戳 (ms)",
+            "schema": {
+              "example": 1672531200000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "结束时间戳 (ms)",
+            "schema": {
+              "example": 1672532200000,
+              "type": "number"
+            }
+          },
+          {
             "name": "action",
             "required": false,
             "in": "query",
@@ -392,6 +412,26 @@
               "example": 200,
               "type": "number"
             }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "开始时间戳 (ms)",
+            "schema": {
+              "example": 1672531200000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "结束时间戳 (ms)",
+            "schema": {
+              "example": 1672532200000,
+              "type": "number"
+            }
           }
         ],
         "responses": {
@@ -463,6 +503,26 @@
               "minimum": 1,
               "maximum": 1000,
               "example": 200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "开始时间戳 (ms)",
+            "schema": {
+              "example": 1672531200000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "结束时间戳 (ms)",
+            "schema": {
+              "example": 1672532200000,
               "type": "number"
             }
           }
@@ -538,6 +598,26 @@
               "example": 200,
               "type": "number"
             }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "开始时间戳 (ms)",
+            "schema": {
+              "example": 1672531200000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "结束时间戳 (ms)",
+            "schema": {
+              "example": 1672532200000,
+              "type": "number"
+            }
           }
         ],
         "responses": {
@@ -609,6 +689,26 @@
               "minimum": 1,
               "maximum": 1000,
               "example": 200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "开始时间戳 (ms)",
+            "schema": {
+              "example": 1672531200000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "结束时间戳 (ms)",
+            "schema": {
+              "example": 1672532200000,
               "type": "number"
             }
           },
@@ -695,6 +795,26 @@
               "minimum": 1,
               "maximum": 1000,
               "example": 200,
+              "type": "number"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "开始时间戳 (ms)",
+            "schema": {
+              "example": 1672531200000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "结束时间戳 (ms)",
+            "schema": {
+              "example": 1672532200000,
               "type": "number"
             }
           },
@@ -1071,7 +1191,7 @@
     },
     "/servers/{serverName}/versions/{versionNo}/rollback": {
       "post": {
-        "description": "复制目标版本生成新版本，并记录审计日志。",
+        "description": "复制目标版本生成新版本，并执行 Nginx 下发。",
         "operationId": "VersionsController_rollback",
         "parameters": [
           {
@@ -1107,7 +1227,27 @@
         },
         "responses": {
           "200": {
-            "description": "回滚后的新版本",
+            "description": "发布结果（含步骤）"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "回滚到指定策略版本（生成新版本）",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/servers": {
+      "get": {
+        "operationId": "RulesController_listServers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Server Names",
             "content": {
               "application/json": {
                 "schema": {
@@ -1119,7 +1259,10 @@
                       "type": "object",
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/ServerPolicyVersionResponse"
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       }
                     }
@@ -1134,7 +1277,129 @@
             "bearer": []
           }
         ],
-        "summary": "回滚到指定策略版本（生成新版本）",
+        "summary": "列出所有纳管的站点 (serverName)",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/servers/{serverName}/publish": {
+      "post": {
+        "description": "组合策略 JSON 并写入规则文件，更新 nginx.conf 后执行 `nginx -t -q` 与 reload；失败会回滚并返回步骤日志。",
+        "operationId": "RulesController_publish",
+        "parameters": [
+          {
+            "name": "serverName",
+            "required": true,
+            "in": "path",
+            "description": "站点名称（nginx server_name）",
+            "schema": {
+              "example": "example1.com",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发布结果（结构化 steps 与 publishLog）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/PublishPolicyResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "下发并创建新策略版本（生成规则文件 → 更新 nginx.conf → 校验 → reload）",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/servers/{serverName}/runtime": {
+      "put": {
+        "description": "基于最新策略生成新版本并更新 nginx.conf，失败时回滚；返回结构化步骤输出。",
+        "operationId": "RulesController_updateRuntime",
+        "parameters": [
+          {
+            "name": "serverName",
+            "required": true,
+            "in": "path",
+            "description": "站点名称（nginx server_name）",
+            "schema": {
+              "example": "example1.com",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRuntimeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "运行态更新结果（steps/rollbackSteps）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RuntimeUpdateResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "修改运行态开关（wafEnabled/dynamicBlock/defaultAction），带锁与失败回滚",
         "tags": [
           "ServerPolicy"
         ]
@@ -1804,133 +2069,21 @@
         ]
       }
     },
-    "/servers/{serverName}/publish": {
-      "post": {
-        "description": "组合策略 JSON 并写入规则文件，更新 nginx.conf 后执行 `nginx -t -q` 与 reload；失败会回滚并返回步骤日志。",
-        "operationId": "RulesController_publish",
-        "parameters": [
-          {
-            "name": "serverName",
-            "required": true,
-            "in": "path",
-            "description": "站点名称（nginx server_name）",
-            "schema": {
-              "example": "example1.com",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PublishPolicyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "发布结果（结构化 steps 与 publishLog）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ApiEnvelope"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/PublishPolicyResponseDto"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "下发并创建新策略版本（生成规则文件 → 更新 nginx.conf → 校验 → reload）",
-        "tags": [
-          "ServerPolicy"
-        ]
-      }
-    },
-    "/servers/{serverName}/runtime": {
-      "put": {
-        "description": "基于最新策略生成新版本并更新 nginx.conf，失败时回滚；返回结构化步骤输出。",
-        "operationId": "RulesController_updateRuntime",
-        "parameters": [
-          {
-            "name": "serverName",
-            "required": true,
-            "in": "path",
-            "description": "站点名称（nginx server_name）",
-            "schema": {
-              "example": "example1.com",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateRuntimeDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "运行态更新结果（steps/rollbackSteps）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ApiEnvelope"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/RuntimeUpdateResponseDto"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "修改运行态开关（wafEnabled/dynamicBlock/defaultAction），带锁与失败回滚",
-        "tags": [
-          "ServerPolicy"
-        ]
-      }
-    },
     "/reports/waf": {
       "get": {
         "description": "返回防护报告摘要数据，用于前端图表渲染。",
         "operationId": "ReportsController_getReport",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "timeRange",
+            "required": false,
+            "in": "query",
+            "description": "24h, 7d",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "报告摘要",
@@ -1961,47 +2114,6 @@
           }
         ],
         "summary": "获取防护报告（JSON 摘要）",
-        "tags": [
-          "Reports"
-        ]
-      }
-    },
-    "/reports/waf/export": {
-      "get": {
-        "description": "导出当前报告摘要的 PDF 文件。",
-        "operationId": "ReportsController_exportPdf",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "PDF 文件",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ApiEnvelope"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "data": {
-                          "type": "string",
-                          "format": "binary"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "导出防护报告 PDF",
         "tags": [
           "Reports"
         ]
@@ -3074,66 +3186,6 @@
           }
         }
       },
-      "CoreRuleSetVersionResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "版本 ID",
-            "example": 12
-          },
-          "coreName": {
-            "type": "string",
-            "description": "核心规则集名称",
-            "example": "core_sqli_rules"
-          },
-          "versionNo": {
-            "type": "number",
-            "description": "版本号",
-            "example": 3
-          },
-          "rulesJson": {
-            "type": "object",
-            "description": "核心规则 JSON",
-            "additionalProperties": true
-          },
-          "status": {
-            "type": "string",
-            "description": "状态",
-            "enum": [
-              "SUCCESS",
-              "FAILED",
-              "ROLLED_BACK"
-            ]
-          },
-          "note": {
-            "type": "string",
-            "description": "备注"
-          },
-          "createdBy": {
-            "type": "string",
-            "description": "创建人",
-            "example": "admin"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "创建时间（ISO）"
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "更新时间（ISO）"
-          }
-        },
-        "required": [
-          "id",
-          "coreName",
-          "versionNo",
-          "rulesJson",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
       "RuleDto": {
         "type": "object",
         "properties": {
@@ -3218,206 +3270,6 @@
           "match",
           "pattern",
           "action"
-        ]
-      },
-      "CreateCoreRuleSetDto": {
-        "type": "object",
-        "properties": {
-          "coreName": {
-            "type": "string",
-            "description": "核心规则集名称",
-            "example": "core_sqli_rules"
-          },
-          "rules": {
-            "description": "规则列表（friendly JSON 结构）",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RuleDto"
-            }
-          },
-          "note": {
-            "type": "string",
-            "description": "备注",
-            "example": "补充 SQLi 规则"
-          },
-          "actor": {
-            "type": "string",
-            "description": "操作者",
-            "example": "alice"
-          }
-        },
-        "required": [
-          "coreName",
-          "rules"
-        ]
-      },
-      "RollbackCoreRuleSetDto": {
-        "type": "object",
-        "properties": {
-          "actor": {
-            "type": "string",
-            "description": "操作者",
-            "example": "alice"
-          }
-        }
-      },
-      "TemplateRuleSetVersionResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "版本 ID",
-            "example": 12
-          },
-          "templateName": {
-            "type": "string",
-            "description": "模板名称",
-            "example": "ip_whitelist"
-          },
-          "versionNo": {
-            "type": "number",
-            "description": "版本号",
-            "example": 3
-          },
-          "rulesJson": {
-            "type": "object",
-            "description": "模板规则 JSON",
-            "additionalProperties": true
-          },
-          "status": {
-            "type": "string",
-            "description": "状态",
-            "enum": [
-              "SUCCESS",
-              "FAILED",
-              "ROLLED_BACK"
-            ]
-          },
-          "note": {
-            "type": "string",
-            "description": "备注"
-          },
-          "createdBy": {
-            "type": "string",
-            "description": "创建人",
-            "example": "admin"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "创建时间（ISO）"
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "更新时间（ISO）"
-          }
-        },
-        "required": [
-          "id",
-          "templateName",
-          "versionNo",
-          "rulesJson",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CreateTemplateDto": {
-        "type": "object",
-        "properties": {
-          "templateName": {
-            "type": "string",
-            "description": "模板名称",
-            "example": "ip_whitelist"
-          },
-          "rules": {
-            "description": "规则列表（friendly JSON 结构）",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RuleDto"
-            }
-          },
-          "note": {
-            "type": "string",
-            "description": "备注",
-            "example": "自定义 IP 白名单模板"
-          },
-          "actor": {
-            "type": "string",
-            "description": "操作者",
-            "example": "alice"
-          }
-        },
-        "required": [
-          "templateName",
-          "rules"
-        ]
-      },
-      "RollbackTemplateDto": {
-        "type": "object",
-        "properties": {
-          "actor": {
-            "type": "string",
-            "description": "操作者",
-            "example": "alice"
-          }
-        }
-      },
-      "OpsAuditLogResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "number",
-            "description": "日志 ID",
-            "example": 100
-          },
-          "actionType": {
-            "type": "string",
-            "description": "动作类型",
-            "example": "PUBLISH_POLICY"
-          },
-          "targetType": {
-            "type": "string",
-            "description": "目标类型",
-            "example": "server"
-          },
-          "targetName": {
-            "type": "string",
-            "description": "目标名称",
-            "example": "example.com"
-          },
-          "status": {
-            "type": "string",
-            "description": "执行状态",
-            "enum": [
-              "SUCCESS",
-              "FAILED"
-            ]
-          },
-          "actor": {
-            "type": "string",
-            "description": "操作者",
-            "example": "admin"
-          },
-          "note": {
-            "type": "string",
-            "description": "备注"
-          },
-          "detail": {
-            "type": "object",
-            "description": "细节（steps/rollbackSteps 等摘要）",
-            "additionalProperties": true
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "创建时间（ISO）"
-          }
-        },
-        "required": [
-          "id",
-          "actionType",
-          "targetType",
-          "status",
-          "createdAt"
         ]
       },
       "PublishPolicyDto": {
@@ -3653,6 +3505,266 @@
           "rollbackSteps"
         ]
       },
+      "CoreRuleSetVersionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "版本 ID",
+            "example": 12
+          },
+          "coreName": {
+            "type": "string",
+            "description": "核心规则集名称",
+            "example": "core_sqli_rules"
+          },
+          "versionNo": {
+            "type": "number",
+            "description": "版本号",
+            "example": 3
+          },
+          "rulesJson": {
+            "type": "object",
+            "description": "核心规则 JSON",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "description": "状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED",
+              "ROLLED_BACK"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "备注"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "创建人",
+            "example": "admin"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间（ISO）"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "更新时间（ISO）"
+          }
+        },
+        "required": [
+          "id",
+          "coreName",
+          "versionNo",
+          "rulesJson",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCoreRuleSetDto": {
+        "type": "object",
+        "properties": {
+          "coreName": {
+            "type": "string",
+            "description": "核心规则集名称",
+            "example": "core_sqli_rules"
+          },
+          "rules": {
+            "description": "规则列表（friendly JSON 结构）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleDto"
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "备注",
+            "example": "补充 SQLi 规则"
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        },
+        "required": [
+          "coreName",
+          "rules"
+        ]
+      },
+      "RollbackCoreRuleSetDto": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        }
+      },
+      "TemplateRuleSetVersionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "版本 ID",
+            "example": 12
+          },
+          "templateName": {
+            "type": "string",
+            "description": "模板名称",
+            "example": "ip_whitelist"
+          },
+          "versionNo": {
+            "type": "number",
+            "description": "版本号",
+            "example": 3
+          },
+          "rulesJson": {
+            "type": "object",
+            "description": "模板规则 JSON",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "description": "状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED",
+              "ROLLED_BACK"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "备注"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "创建人",
+            "example": "admin"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间（ISO）"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "更新时间（ISO）"
+          }
+        },
+        "required": [
+          "id",
+          "templateName",
+          "versionNo",
+          "rulesJson",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateTemplateDto": {
+        "type": "object",
+        "properties": {
+          "templateName": {
+            "type": "string",
+            "description": "模板名称",
+            "example": "ip_whitelist"
+          },
+          "rules": {
+            "description": "规则列表（friendly JSON 结构）",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleDto"
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "备注",
+            "example": "自定义 IP 白名单模板"
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        },
+        "required": [
+          "templateName",
+          "rules"
+        ]
+      },
+      "RollbackTemplateDto": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "alice"
+          }
+        }
+      },
+      "OpsAuditLogResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "日志 ID",
+            "example": 100
+          },
+          "actionType": {
+            "type": "string",
+            "description": "动作类型",
+            "example": "PUBLISH_POLICY"
+          },
+          "targetType": {
+            "type": "string",
+            "description": "目标类型",
+            "example": "server"
+          },
+          "targetName": {
+            "type": "string",
+            "description": "目标名称",
+            "example": "example.com"
+          },
+          "status": {
+            "type": "string",
+            "description": "执行状态",
+            "enum": [
+              "SUCCESS",
+              "FAILED"
+            ]
+          },
+          "actor": {
+            "type": "string",
+            "description": "操作者",
+            "example": "admin"
+          },
+          "note": {
+            "type": "string",
+            "description": "备注"
+          },
+          "detail": {
+            "type": "object",
+            "description": "细节（steps/rollbackSteps 等摘要）",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "创建时间（ISO）"
+          }
+        },
+        "required": [
+          "id",
+          "actionType",
+          "targetType",
+          "status",
+          "createdAt"
+        ]
+      },
       "WafReportKpiDto": {
         "type": "object",
         "properties": {
@@ -3730,7 +3842,8 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "区域名称"
+            "description": "名称/编码",
+            "example": "CN"
           },
           "count": {
             "type": "number",
@@ -3740,41 +3853,6 @@
         "required": [
           "name",
           "count"
-        ]
-      },
-      "GeoSectionDto": {
-        "type": "object",
-        "properties": {
-          "mode": {
-            "type": "string",
-            "description": "模式：visit | block",
-            "example": "visit"
-          },
-          "scope": {
-            "type": "string",
-            "description": "范围：world | china",
-            "example": "world"
-          },
-          "heatmap": {
-            "description": "热点数据",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GeoEntryDto"
-            }
-          },
-          "top": {
-            "description": "Top 榜单",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GeoEntryDto"
-            }
-          }
-        },
-        "required": [
-          "mode",
-          "scope",
-          "heatmap",
-          "top"
         ]
       },
       "WafReportSummaryDto": {
@@ -3816,7 +3894,7 @@
             "description": "世界热点",
             "allOf": [
               {
-                "$ref": "#/components/schemas/GeoSectionDto"
+                "$ref": "#/components/schemas/GeoStatsResponseDto"
               }
             ]
           },
@@ -3824,7 +3902,7 @@
             "description": "国内热点",
             "allOf": [
               {
-                "$ref": "#/components/schemas/GeoSectionDto"
+                "$ref": "#/components/schemas/GeoStatsResponseDto"
               }
             ]
           },

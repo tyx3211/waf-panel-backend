@@ -27,6 +27,24 @@ export class BaseLokiQueryDto {
   @Min(1)
   @Max(1000)
   limit?: number;
+
+  @ApiPropertyOptional({
+    description: '开始时间戳 (ms)',
+    example: 1672531200000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  start?: number;
+
+  @ApiPropertyOptional({
+    description: '结束时间戳 (ms)',
+    example: 1672532200000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  end?: number;
 }
 
 export class WafLogsQueryDto extends BaseLokiQueryDto {

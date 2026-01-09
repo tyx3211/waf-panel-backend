@@ -39,6 +39,14 @@ export class PolicyVersionService {
     });
   }
 
+  async listAllServerNames(): Promise<string[]> {
+    const raw = await this.repo
+      .createQueryBuilder('v')
+      .select('DISTINCT v.serverName', 'name')
+      .getRawMany<{ name: string }>();
+    return raw.map((r) => r.name);
+  }
+
   async createVersion(
     input: CreatePolicyVersionInput,
   ): Promise<ServerPolicyVersion> {

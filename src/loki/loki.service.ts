@@ -165,9 +165,17 @@ export class LokiService {
   ): Promise<LokiResult<LokiRangeData>> {
     if (!this.client)
       return { data: { resultType: 'streams', result: [] } as LokiRangeData };
-    const { start, end } = this.buildTimeParams(q.timeRange);
+    let start: number, end: number;
+    if (q.start && q.end) {
+      start = Math.floor(q.start / 1000);
+      end = Math.floor(q.end / 1000);
+    } else {
+      const p = this.buildTimeParams(q.timeRange);
+      start = p.start;
+      end = p.end;
+    }
     const query = this.buildWafQuery(q);
-    
+
     return this.queryRange({
       query,
       limit: this.resolveLimit(q.limit, 5000),
@@ -433,27 +441,27 @@ export class LokiService {
     // Optimization: Use instant query for aggregation instead of fetching all logs.
     // For China scope, we must filter by country to avoid showing foreign states/provinces
     // Assuming the log has 'country' label or we filter by it.
-    // Since 'country' is inside the JSON line but not always a label in Promtail unless configured, 
+    // Since 'country' is inside the JSON line but not always a label in Promtail unless configured,
     // BUT we are using jobAccess which usually has limited labels.
-    // Wait, let's check if 'country' is a label. 
-    // In nginx.conf/promtail we usually set labels. 
+    // Wait, let's check if 'country' is a label.
+    // In nginx.conf/promtail we usually set labels.
     // If not a label, query performance might drop if we use | json | country="中国".
     // However, for correct data, we must filter.
-    
-    // Check if we can use a label filter. 
+
+    // Check if we can use a label filter.
     // If Promtail extracts country as label, use it.
     // Assuming country IS NOT a label by default in our current setup (only job, host, blocked).
     // So we use parsing.
-    
+
     let query = '';
     if (scope === 'china') {
-       // Filter for China logs first
-       query = `sum by (${label}) (count_over_time(${selector} | json | country="中国" [${range}]))`;
+      // Filter for China logs first
+      query = `sum by (${label}) (count_over_time(${selector} | json | country="中国" [${range}]))`;
     } else {
-       // Even for world scope, we need 'country' (which is now just a json field, not a label)
-       // So we must use | json to extract it as a temporary label for aggregation
-       // We also filter out empty countries to hide historical dirty data (localhost logs)
-       query = `sum by (${label}) (count_over_time(${selector} | json | country!="" [${range}]))`;
+      // Even for world scope, we need 'country' (which is now just a json field, not a label)
+      // So we must use | json to extract it as a temporary label for aggregation
+      // We also filter out empty countries to hide historical dirty data (localhost logs)
+      query = `sum by (${label}) (count_over_time(${selector} | json | country!="" [${range}]))`;
     }
     const time = BigInt(Math.floor(end * 1e9)).toString();
 
@@ -883,7 +891,108 @@ export class LokiService {
       requests: bucket.requests,
       blocks: bucket.blocks,
     }));
-    return { intervalSeconds, points, warnings };
+    return {
+      intervalSeconds,
+      points,
+      warnings,
+    };
+  }
+
+  // --- New Methods for WAF Report ---
+
+  async queryWafTimeline(
+    q: BaseLokiQueryDto,
+  ): Promise<Array<{ ts: number; requests: number; blocks: number }>> {
+    if (!this.client) return [];
+
+    // Determine step based on range
+    const { start, end } = this.buildTimeParams(q.timeRange);
+    const duration = end - start;
+    let step = '1m';
+    if (duration > 3600 * 24) step = '1h';
+    else if (duration > 3600) step = '5m';
+
+    // Simple filters
+    let filters = '| json';
+    if (q.server) filters += ` | host="${q.server}"`;
+
+    const reqQ = `sum(count_over_time({job="${this.jobWaf()}"} ${filters} [${step}]))`;
+    const blockQ = `sum(count_over_time({job="${this.jobWaf()}"} ${filters} | finalAction=~"BLOCK.*" [${step}]))`;
+
+    const [reqRes, blockRes] = await Promise.all([
+      this.client.get('/loki/api/v1/query_range', {
+        params: { query: reqQ, start: start * 1e9, end: end * 1e9, step },
+      }),
+      this.client.get('/loki/api/v1/query_range', {
+        params: { query: blockQ, start: start * 1e9, end: end * 1e9, step },
+      }),
+    ]);
+
+    // Helper to extract points map
+    const getPoints = (d: LokiRangeData) => {
+      const map = new Map<number, number>();
+      if (d?.resultType === 'matrix' && Array.isArray(d.result)) {
+        for (const series of d.result as LokiMatrixResult[]) {
+          for (const [ts, val] of series.values) {
+            map.set(ts, Number(val));
+          }
+        }
+      }
+      return map;
+    };
+
+    const reqMap = getPoints((reqRes.data as { data: LokiRangeData }).data);
+    const blockMap = getPoints((blockRes.data as { data: LokiRangeData }).data);
+
+    // Merge
+    const allTs = new Set([...reqMap.keys(), ...blockMap.keys()]);
+    const sortedTs = Array.from(allTs).sort((a, b) => a - b);
+
+    return sortedTs
+      .map((ts) => ({
+        ts: ts, // Loki timestamp here is seconds * 1000 since we requested query_range?
+        // Wait, Loki query_range matrix keys are usually seconds.
+        // BUT my getPoints parses them directly.
+        // If they are seconds, we need to multiply by 1000 for JS Date.
+        // Let's assume seconds (standard Prometheus/Loki API).
+        requests: reqMap.get(ts) || 0,
+        blocks: blockMap.get(ts) || 0,
+      }))
+      .map((p) => ({ ...p, ts: p.ts * 1000 }));
+  }
+
+  async queryWafTopN(
+    q: BaseLokiQueryDto,
+    field: string,
+    n = 10,
+    filterBlocked = false,
+  ): Promise<Array<{ name: string; count: number }>> {
+    if (!this.client) return [];
+
+    const { start, end } = this.buildTimeParams(q.timeRange);
+    const range = `${Math.max(1, end - start)}s`;
+    const time = BigInt(Math.floor(end * 1e9)).toString();
+
+    let filters = '| json';
+    if (q.server) filters += ` | host="${q.server}"`;
+    if (filterBlocked) filters += ` | finalAction=~"BLOCK.*"`;
+
+    // Ensure field is not empty string
+    filters += ` | ${field}!=""`;
+
+    const query = `topk(${n}, sum by (${field}) (count_over_time({job="${this.jobWaf()}"} ${filters} [${range}])))`;
+
+    const res = await this.queryInstant({ query, time });
+
+    if (res.data.resultType !== 'vector') return [];
+    if (!Array.isArray(res.data.result)) return [];
+
+    return (res.data.result as LokiVectorResult[])
+      .map((r) => ({
+        name: r.metric[field] || 'unknown',
+        count: Number(r.value[1]),
+      }))
+      .sort((a, b) => b.count - a.count);
   }
 
   private aggregateGeo(

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { GeoStatsResponseDto } from '../../loki/dto/log-response.dto';
 
 export class WafReportKpiDto {
   @ApiProperty({ description: '请求总数' })
@@ -37,7 +38,7 @@ export class AttackBreakdownDto {
 }
 
 export class GeoEntryDto {
-  @ApiProperty({ description: '区域名称' })
+  @ApiProperty({ description: '名称/编码', example: 'CN' })
   name!: string;
 
   @ApiProperty({ description: '数量' })
@@ -88,11 +89,11 @@ export class WafReportSummaryDto {
   @ApiProperty({ description: '攻击类型分布', type: [AttackBreakdownDto] })
   attackTypes!: AttackBreakdownDto[];
 
-  @ApiProperty({ description: '世界热点', type: GeoSectionDto })
-  geoWorld!: GeoSectionDto;
+  @ApiProperty({ description: '世界热点', type: GeoStatsResponseDto })
+  geoWorld!: GeoStatsResponseDto;
 
-  @ApiProperty({ description: '国内热点', type: GeoSectionDto })
-  geoChina!: GeoSectionDto;
+  @ApiProperty({ description: '国内热点', type: GeoStatsResponseDto })
+  geoChina!: GeoStatsResponseDto;
 
   @ApiProperty({
     description: '高频 URL 榜单',

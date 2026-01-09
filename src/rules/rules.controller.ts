@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Put,
+  Get,
   UseGuards,
 } from '@nestjs/common';
 import { PublishPolicyDto } from './dto/publish-policy.dto';
@@ -114,6 +115,14 @@ class RuntimeUpdateResponseDto {
 @Controller('servers')
 export class RulesController {
   constructor(private readonly publishService: PolicyPublishService) {}
+
+  @Get()
+  @Roles('admin')
+  @ApiOperation({ summary: '列出所有纳管的站点 (serverName)' })
+  @ApiOkResponse({ description: 'Server Names', type: [String] })
+  async listServers() {
+    return this.publishService.listAllServers();
+  }
 
   @Post(':serverName/publish')
   @HttpCode(200)

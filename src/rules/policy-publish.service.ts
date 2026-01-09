@@ -71,6 +71,10 @@ export class PolicyPublishService {
     private readonly templateRepo: Repository<TemplateRuleSetVersion>,
   ) {}
 
+  async listAllServers() {
+    return this.versions.listAllServerNames();
+  }
+
   async publish(serverName: string, dto: PublishPolicyDto) {
     return this.locks.withLock(LOCK_GLOBAL_NGINX, async () => {
       const normalized = this.normalizeDto(dto);
@@ -497,6 +501,30 @@ export class PolicyPublishService {
       );
       return undefined;
     }
+  }
+
+  async rollbackToVersion(
+    serverName: string,
+    versionNo: number,
+    actor?: string,
+  ) {
+    const target = await this.versions.findByVersionNo(serverName, versionNo);
+    if (!target) {
+      throw new Error(`Target version v1.${versionNo} not found`);
+    }
+
+    const policy = target.policyJson as PolicyDoc;
+    const rules = (policy.rules || []) as unknown as Record<string, unknown>[];
+
+    return this.publish(serverName, {
+      enabledCoreRules: target.enabledCoreRules ?? [],
+      enabledTemplates: target.enabledTemplates ?? [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+      rules: rules as any,
+      note: `rollback to v1.${versionNo}`,
+      actor,
+      dryRun: false,
+    });
   }
 }
 
