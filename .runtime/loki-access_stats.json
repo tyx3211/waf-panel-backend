@@ -1,1 +1,1 @@
-{"code":0,"message":"ok","data":{"data":{"resultType":"streams","result":[]},"warnings":["Request failed with status code 400"]}}
+{"code":0,"message":"ok","data":{"summary":{"requests":1,"blocks":0,"uniqueIps":1,"status4xx":1,"status5xx":0,"qpsAvg":0},"byHost":[{"host":"example1.com","requests":1,"blocks":0}],"byUpstreamStatus":[],"reqLen":{"avg":89,"p95":89,"max":89},"upRt":{"avg":0,"p95":0,"max":0}}}

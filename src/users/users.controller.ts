@@ -36,6 +36,10 @@ class UserResponse {
   displayName?: string;
   @ApiProperty({ description: '是否内置账号', example: true })
   builtIn!: boolean;
+  @ApiProperty({ description: '创建时间', example: '2021-01-01T00:00:00.000Z' })
+  createdAt!: string;
+  @ApiProperty({ description: '更新时间', example: '2021-01-01T00:00:00.000Z' })
+  updatedAt!: string;
 }
 
 @ApiTags('Users')

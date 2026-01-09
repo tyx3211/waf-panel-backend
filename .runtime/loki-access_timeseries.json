@@ -1,0 +1,1 @@
+{"code":0,"message":"ok","data":{"intervalSeconds":60,"points":[{"ts":"2026-01-09T13:07:55.000Z","requests":0,"blocks":0},{"ts":"2026-01-09T13:08:55.000Z","requests":0,"blocks":0},{"ts":"2026-01-09T13:09:55.000Z","requests":0,"blocks":0},{"ts":"2026-01-09T13:10:55.000Z","requests":0,"blocks":0},{"ts":"2026-01-09T13:11:55.000Z","requests":1,"blocks":0}]}}

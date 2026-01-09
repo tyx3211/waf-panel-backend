@@ -1,4 +1,11 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -21,6 +28,12 @@ class AuthUserDto {
 
   @ApiProperty({ description: '角色', enum: ['admin', 'user'] })
   role!: 'admin' | 'user';
+
+  @ApiProperty({ description: '显示名称', example: '管理员' })
+  displayName?: string;
+
+  @ApiProperty({ description: '是否为内置账号', example: true })
+  builtIn!: boolean;
 }
 
 class TokenResponseDto {

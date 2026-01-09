@@ -14,6 +14,13 @@ import {
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/guards/roles.decorator';
+import {
+  AccessStatsResponseDto,
+  AccessTimeseriesResponseDto,
+  GeoStatsResponseDto,
+  LokiLogsResponseDto,
+  WafStatsResponseDto,
+} from './dto/log-response.dto';
 
 @ApiTags('Loki')
 @ApiBearerAuth()
@@ -30,9 +37,9 @@ export class LokiController {
   })
   @ApiOkResponse({
     description: 'Loki 查询结果',
-    schema: { type: 'object', additionalProperties: true },
+    type: LokiLogsResponseDto,
   })
-  async getWafLogs(@Query() q: WafLogsQueryDto) {
+  async getWafLogs(@Query() q: WafLogsQueryDto): Promise<LokiLogsResponseDto> {
     return this.loki.queryWafLogs(q);
   }
 
@@ -44,9 +51,11 @@ export class LokiController {
   })
   @ApiOkResponse({
     description: '统计结果',
-    schema: { type: 'object', additionalProperties: true },
+    type: WafStatsResponseDto,
   })
-  async getWafStats(@Query() q: BaseLokiQueryDto) {
+  async getWafStats(
+    @Query() q: BaseLokiQueryDto,
+  ): Promise<WafStatsResponseDto> {
     return this.loki.queryWafStats(q);
   }
 
@@ -58,9 +67,11 @@ export class LokiController {
   })
   @ApiOkResponse({
     description: '统计结果',
-    schema: { type: 'object', additionalProperties: true },
+    type: AccessStatsResponseDto,
   })
-  async getAccessStats(@Query() q: BaseLokiQueryDto) {
+  async getAccessStats(
+    @Query() q: BaseLokiQueryDto,
+  ): Promise<AccessStatsResponseDto> {
     return this.loki.queryAccessStats(q);
   }
 
@@ -72,9 +83,11 @@ export class LokiController {
   })
   @ApiOkResponse({
     description: '时序结果',
-    schema: { type: 'object', additionalProperties: true },
+    type: AccessTimeseriesResponseDto,
   })
-  async getAccessTimeseries(@Query() q: BaseLokiQueryDto) {
+  async getAccessTimeseries(
+    @Query() q: BaseLokiQueryDto,
+  ): Promise<AccessTimeseriesResponseDto> {
     return this.loki.queryAccessTimeseries(q);
   }
 
@@ -86,9 +99,9 @@ export class LokiController {
   })
   @ApiOkResponse({
     description: '地理聚合结果',
-    schema: { type: 'object', additionalProperties: true },
+    type: GeoStatsResponseDto,
   })
-  async geoWorld(@Query() q: GeoModeQueryDto) {
+  async geoWorld(@Query() q: GeoModeQueryDto): Promise<GeoStatsResponseDto> {
     return this.loki.queryGeo(q, 'world');
   }
 
@@ -100,9 +113,9 @@ export class LokiController {
   })
   @ApiOkResponse({
     description: '地理聚合结果',
-    schema: { type: 'object', additionalProperties: true },
+    type: GeoStatsResponseDto,
   })
-  async geoChina(@Query() q: GeoModeQueryDto) {
+  async geoChina(@Query() q: GeoModeQueryDto): Promise<GeoStatsResponseDto> {
     return this.loki.queryGeo(q, 'china');
   }
 }

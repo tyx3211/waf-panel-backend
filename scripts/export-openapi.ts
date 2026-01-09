@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { applyEnvelope } from '../src/common/http/openapi-envelope';
 import fs from 'fs';
 import path from 'path';
 
@@ -15,6 +16,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
+  applyEnvelope(document);
   const outDir = path.join(__dirname, '..', 'exports');
   fs.mkdirSync(outDir, { recursive: true });
   const outFile = path.join(outDir, 'openapi.v1.json');

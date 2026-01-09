@@ -20,5 +20,6 @@ import { LocksModule } from '../common/locks/locks.module';
   ],
   controllers: [AlertsController],
   providers: [AlertsService, AlertMailService],
+  exports: [AlertMailService],
 })
 export class AlertsModule {}

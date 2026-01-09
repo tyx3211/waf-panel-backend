@@ -4,7 +4,7 @@ import { LokiService } from '../../loki/loki.service';
 describe('ReportsService', () => {
   const makeLoki = () =>
     ({
-      queryWafLogs: jest.fn().mockResolvedValue({
+      queryWafLogsRaw: jest.fn().mockResolvedValue({
         data: {
           resultType: 'streams',
           result: [
@@ -66,7 +66,7 @@ describe('ReportsService', () => {
 
   it('should produce a pdf buffer with header', () => {
     const loki = {
-      queryWafLogs: jest
+      queryWafLogsRaw: jest
         .fn()
         .mockResolvedValue({ data: { resultType: 'streams', result: [] } }),
     } as unknown as LokiService;

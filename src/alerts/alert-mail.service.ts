@@ -31,6 +31,38 @@ export class AlertMailService {
     }
   }
 
+  /**
+   * Verify SMTP connection without sending mail.
+   * Returns true if connection is successful.
+   */
+  async verify(): Promise<{ ok: boolean; error?: string }> {
+    if (!this.cfg?.enabled) {
+      return { ok: false, error: 'SMTP 未启用' };
+    }
+    if (!this.transporter) {
+      return { ok: false, error: 'SMTP 配置缺失' };
+    }
+    try {
+      await this.transporter.verify();
+      return { ok: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'SMTP 连接失败';
+      this.logger.warn(`SMTP verify failed: ${message}`);
+      return { ok: false, error: message };
+    }
+  }
+
+  /**
+   * Get SMTP status for health checks.
+   */
+  getStatus(): { enabled: boolean; configured: boolean; host?: string } {
+    return {
+      enabled: this.cfg?.enabled ?? false,
+      configured: !!this.transporter,
+      host: this.cfg?.host,
+    };
+  }
+
   async send(
     recipients: string[],
     subject: string,

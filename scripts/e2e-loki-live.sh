@@ -134,6 +134,7 @@ query_loki() {
   local token="$1"
   local endpoint="$2"
   local query="$3"
+  local expect="$4"
   local safe_endpoint="${endpoint//\//_}"
   local resp_file="$RUNTIME_DIR/loki-$safe_endpoint.json"
   local resp
@@ -153,13 +154,40 @@ query_loki() {
   node -e '
 const fs=require("fs");
 const raw=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
-const data=raw?.data || raw;
-if(!data || !data.data){
-  console.error("invalid loki response");
+const payload=raw?.data ?? raw;
+if(!payload){
+  console.error("invalid loki response (empty)");
   process.exit(1);
 }
-console.log("loki ok", data.data.resultType);
-' "$resp_file"
+const expect=process.argv[2];
+if(expect === "logs"){
+  if(!payload.resultType || !Array.isArray(payload.result)){
+    console.error("invalid logs response shape");
+    process.exit(1);
+  }
+  console.log("loki logs ok", payload.resultType);
+}else if(expect === "wafStats" || expect === "accessStats"){
+  if(!payload.summary){
+    console.error("invalid stats response shape");
+    process.exit(1);
+  }
+  console.log("loki stats ok");
+}else if(expect === "timeseries"){
+  if(typeof payload.intervalSeconds !== "number" || !Array.isArray(payload.points)){
+    console.error("invalid timeseries response shape");
+    process.exit(1);
+  }
+  console.log("loki timeseries ok");
+}else if(expect === "geo"){
+  if(!payload.mode || !payload.scope){
+    console.error("invalid geo response shape");
+    process.exit(1);
+  }
+  console.log("loki geo ok");
+}else{
+  console.log("loki ok");
+}
+' "$resp_file" "$expect"
 }
 
 main() {
@@ -182,10 +210,12 @@ main() {
   token="$(login_token)"
   trigger_attack
   sleep 2
-  query_loki "$token" "waf/logs" "timeRange=5m&limit=20"
-  query_loki "$token" "waf/stats" "timeRange=5m&limit=20"
-  query_loki "$token" "access/stats" "timeRange=5m&limit=20"
-  query_loki "$token" "geo/world" "timeRange=5m&limit=20&mode=visit"
+  query_loki "$token" "waf/logs" "timeRange=5m&limit=20" "logs"
+  query_loki "$token" "waf/stats" "timeRange=5m&limit=20" "wafStats"
+  query_loki "$token" "access/stats" "timeRange=5m&limit=20" "accessStats"
+  query_loki "$token" "access/timeseries" "timeRange=5m&limit=200" "timeseries"
+  query_loki "$token" "geo/world" "timeRange=5m&limit=200&mode=visit" "geo"
+  query_loki "$token" "geo/china" "timeRange=5m&limit=200&mode=block" "geo"
   if [[ "$STOP_BACKEND_AFTER" == "1" ]]; then
     stop_backend
   fi

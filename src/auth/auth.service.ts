@@ -14,6 +14,8 @@ export interface UserPayload {
   id: number;
   username: string;
   role: 'admin' | 'user';
+  displayName?: string;
+  builtIn: boolean;
 }
 
 export interface Tokens {
@@ -135,7 +137,13 @@ export class AuthService implements OnModuleInit {
     if (!user) throw new UnauthorizedException('invalid credentials');
     const ok = await compare(password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('invalid credentials');
-    return { id: user.id, username: user.username, role: user.role };
+    return {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      displayName: user.displayName,
+      builtIn: user.builtIn,
+    };
   }
 
   async login(payload: UserPayload) {
@@ -201,6 +209,8 @@ export class AuthService implements OnModuleInit {
       id: decoded.id,
       username: decoded.username,
       role: decoded.role,
+      displayName: decoded.displayName,
+      builtIn: decoded.builtIn,
     };
     return this.issueTokens(user);
   }

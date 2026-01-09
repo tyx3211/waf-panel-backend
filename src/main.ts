@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/http/response.interceptor';
 import { AllExceptionsFilter } from './common/http/http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { applyEnvelope } from './common/http/openapi-envelope';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -23,6 +24,7 @@ async function bootstrap() {
     .setVersion('v1')
     .build();
   const document = SwaggerModule.createDocument(app, config);
+  applyEnvelope(document);
   SwaggerModule.setup('/api/v1/docs', app, document);
 
   await app.listen(process.env.PORT ?? 3000);

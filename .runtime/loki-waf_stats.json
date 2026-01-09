@@ -1,1 +1,1 @@
-{"code":0,"message":"ok","data":{"data":{"resultType":"streams","result":[]},"warnings":["Request failed with status code 400"]}}
+{"code":0,"message":"ok","data":{"summary":{"requests":1,"blocks":0,"blockRate":0,"uniqueIps":1,"attackIps":0},"byAttackType":[],"byAction":[{"action":"ALLOW","count":1}]}}

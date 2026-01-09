@@ -14,7 +14,7 @@ export class ReportsService {
   async getSummary(timeRange = '24h'): Promise<WafReportSummaryDto> {
     const now = Date.now();
     const base: BaseLokiQueryDto = { timeRange };
-    const wafLogsRes = await this.loki.queryWafLogs(
+    const wafLogsRes = await this.loki.queryWafLogsRaw(
       base as unknown as WafLogsQueryDto,
     );
     const records = this.parseStreams(wafLogsRes.data);
