@@ -886,7 +886,7 @@
                       "type": "object",
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/AlertConfigResponse"
+                          "$ref": "#/components/schemas/UpdateAlertConfigDto"
                         }
                       }
                     }
@@ -934,7 +934,7 @@
                       "type": "object",
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/AlertConfigResponse"
+                          "$ref": "#/components/schemas/UpdateAlertConfigDto"
                         }
                       }
                     }
@@ -972,26 +972,7 @@
         },
         "responses": {
           "200": {
-            "description": "发送结果",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ApiEnvelope"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/SendAlertResponse"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
+            "description": "发送结果"
           }
         },
         "security": [
@@ -1142,18 +1123,17 @@
         "parameters": [
           {
             "name": "range",
-            "required": true,
+            "required": false,
             "in": "query",
             "description": "查询时间范围",
             "schema": {
-              "default": "1h",
-              "type": "string",
               "enum": [
                 "5m",
                 "1h",
                 "24h",
                 "7d"
-              ]
+              ],
+              "type": "string"
             }
           },
           {
@@ -1213,18 +1193,17 @@
         "parameters": [
           {
             "name": "range",
-            "required": true,
+            "required": false,
             "in": "query",
             "description": "查询时间范围",
             "schema": {
-              "default": "1h",
-              "type": "string",
               "enum": [
                 "5m",
                 "1h",
                 "24h",
                 "7d"
-              ]
+              ],
+              "type": "string"
             }
           },
           {
@@ -1284,18 +1263,17 @@
         "parameters": [
           {
             "name": "range",
-            "required": true,
+            "required": false,
             "in": "query",
             "description": "查询时间范围",
             "schema": {
-              "default": "1h",
-              "type": "string",
               "enum": [
                 "5m",
                 "1h",
                 "24h",
                 "7d"
-              ]
+              ],
+              "type": "string"
             }
           },
           {
@@ -1304,12 +1282,11 @@
             "in": "query",
             "description": "统计模式：访问量或拦截量",
             "schema": {
-              "default": "visit",
-              "type": "string",
               "enum": [
                 "visit",
                 "block"
-              ]
+              ],
+              "type": "string"
             }
           }
         ],
@@ -1491,6 +1468,75 @@
           }
         ],
         "summary": "列出所有纳管的站点 (serverName)",
+        "tags": [
+          "ServerPolicy"
+        ]
+      }
+    },
+    "/servers/global/nginx-params": {
+      "get": {
+        "description": "Trust XFF, Log Level, Dynamic Block Score",
+        "operationId": "RulesController_getGlobalConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/UpdateGlobalConfigDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取全局 Nginx WAF 参数 (http级)",
+        "tags": [
+          "ServerPolicy"
+        ]
+      },
+      "put": {
+        "description": "修改 http 块内的 WAF 指令并 reload",
+        "operationId": "RulesController_updateGlobalConfig",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGlobalConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "更新全局 Nginx WAF 参数",
         "tags": [
           "ServerPolicy"
         ]
@@ -3086,66 +3132,25 @@
         "properties": {
           "blockRate": {
             "type": "number",
-            "description": "拦截率阈值，0-1 之间小数",
+            "description": "总拦截率阈值 (0.0 - 1.0)",
             "example": 0.5
           },
           "qps": {
             "type": "number",
-            "description": "QPS 阈值",
-            "example": 200
+            "description": "总 QPS 阈值",
+            "example": 500
           },
           "attackTypeCounts": {
             "type": "object",
-            "description": "按攻击类型的计数阈值，key 为攻击类型",
+            "description": "特定攻击类型的拦截计数阈值",
+            "additionalProperties": {
+              "type": "number"
+            },
             "example": {
-              "SQL_INJECTION": 10,
-              "XSS": 5
+              "SQL_INJECTION": 50
             }
           }
         }
-      },
-      "AlertConfigResponse": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "是否开启告警",
-            "example": true
-          },
-          "emails": {
-            "description": "收件人邮箱列表",
-            "example": [
-              "ops@example.com"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "thresholds": {
-            "description": "阈值配置",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AlertThresholdsDto"
-              }
-            ]
-          },
-          "updatedBy": {
-            "type": "string",
-            "description": "最近更新人",
-            "example": "admin"
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "最近更新时间",
-            "example": "2026-01-03T01:23:45Z"
-          }
-        },
-        "required": [
-          "enabled",
-          "emails",
-          "thresholds"
-        ]
       },
       "UpdateAlertConfigDto": {
         "type": "object",
@@ -3166,15 +3171,12 @@
             }
           },
           "thresholds": {
-            "type": "object",
             "description": "触发阈值（拦截率/QPS/攻击类型计数）",
-            "example": {
-              "blockRate": 0.5,
-              "qps": 200,
-              "attackTypeCounts": {
-                "SQL_INJECTION": 10
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AlertThresholdsDto"
               }
-            }
+            ]
           }
         }
       },
@@ -3194,45 +3196,6 @@
         },
         "required": [
           "subject"
-        ]
-      },
-      "SendAlertResponse": {
-        "type": "object",
-        "properties": {
-          "sent": {
-            "type": "boolean",
-            "description": "是否已发送（需开启且有收件人）"
-          },
-          "subject": {
-            "type": "string",
-            "description": "标题"
-          },
-          "content": {
-            "type": "string",
-            "description": "正文"
-          },
-          "recipients": {
-            "description": "收件人列表",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "sentAt": {
-            "type": "string",
-            "description": "发送时间 ISO 字符串"
-          },
-          "error": {
-            "type": "string",
-            "description": "失败原因（未开启、无收件人或 SMTP 错误）"
-          }
-        },
-        "required": [
-          "sent",
-          "subject",
-          "content",
-          "recipients",
-          "sentAt"
         ]
       },
       "LoginDto": {
@@ -3581,6 +3544,35 @@
             "type": "string",
             "description": "操作者",
             "example": "alice"
+          }
+        }
+      },
+      "UpdateGlobalConfigDto": {
+        "type": "object",
+        "properties": {
+          "trustXff": {
+            "type": "boolean",
+            "description": "Trust XFF (on/off->boolean)"
+          },
+          "logLevel": {
+            "type": "string",
+            "description": "JSON Log Level"
+          },
+          "dynamicBlockScore": {
+            "type": "number",
+            "description": "Dynamic Block Score Threshold"
+          },
+          "dynamicBlockDuration": {
+            "type": "string",
+            "description": "Dynamic Block Duration (e.g. 30m)"
+          },
+          "dynamicBlockWindow": {
+            "type": "string",
+            "description": "Dynamic Block Window Size (e.g. 1m)"
+          },
+          "note": {
+            "type": "string",
+            "description": "变更备注"
           }
         }
       },
@@ -4235,6 +4227,24 @@
           "count"
         ]
       },
+      "ReportGeoEntryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "名称/编码",
+            "example": "CN"
+          },
+          "count": {
+            "type": "number",
+            "description": "数量"
+          }
+        },
+        "required": [
+          "name",
+          "count"
+        ]
+      },
       "WafReportSummaryDto": {
         "type": "object",
         "properties": {
@@ -4300,7 +4310,7 @@
             ],
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GeoEntryDto"
+              "$ref": "#/components/schemas/ReportGeoEntryDto"
             }
           },
           "topAttackIps": {
@@ -4313,7 +4323,7 @@
             ],
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GeoEntryDto"
+              "$ref": "#/components/schemas/ReportGeoEntryDto"
             }
           },
           "topBlockedUrls": {
@@ -4326,7 +4336,7 @@
             ],
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GeoEntryDto"
+              "$ref": "#/components/schemas/ReportGeoEntryDto"
             }
           },
           "topBlockedIps": {
@@ -4339,7 +4349,7 @@
             ],
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GeoEntryDto"
+              "$ref": "#/components/schemas/ReportGeoEntryDto"
             }
           }
         },

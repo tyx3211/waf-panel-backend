@@ -1,4 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiQuery } from '@nestjs/swagger';
 import { WafMetricsService } from './waf-metrics.service';
 import {
   ApiTags,
@@ -42,9 +43,9 @@ export class WafMetricsController {
   @Get('summary')
   @ApiOperation({
     summary: '获取流量摘要和趋势图',
-    description:
-      '返回指定时间范围内的请求总数、拦截总数、状态码分布及趋势点位数据。',
+    description: '返回指定时间范围内的请求总数、拦截总数、状态码分布及趋势点位数据。',
   })
+  @ApiQuery({ name: 'range', required: false, enum: ['5m', '1h', '24h', '7d'] })
   @ApiOkResponse({ type: WafSummaryResponseDto })
   getSummary(@Query() query: MetricsQueryDto): WafSummaryResponseDto {
     return this.metricsService.getSummary(query.range || '1h');
@@ -55,6 +56,7 @@ export class WafMetricsController {
     summary: '获取 Top 统计 (IP, URL, 攻击类型)',
     description: '基于内存统计返回拦截量最高的 IP、URL 和攻击类型分布。',
   })
+  @ApiQuery({ name: 'range', required: false, enum: ['5m', '1h', '24h', '7d'] })
   @ApiOkResponse({ type: WafTopResponseDto })
   getTop(@Query() query: MetricsQueryDto): WafTopResponseDto {
     return this.metricsService.getTopStats(query.range);
@@ -65,6 +67,8 @@ export class WafMetricsController {
     summary: '获取地理位置分布统计',
     description: '返回拦截和访问的全球/中国省级地理分布图表数据。',
   })
+  @ApiQuery({ name: 'range', required: false, enum: ['5m', '1h', '24h', '7d'] })
+  @ApiQuery({ name: 'mode', required: false, enum: ['visit', 'block'] })
   @ApiOkResponse({ type: WafGeoResponseDto })
   getGeo(@Query() query: MetricsQueryDto): WafGeoResponseDto {
     return this.metricsService.getGeoStats(query.range, query.mode);

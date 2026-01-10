@@ -8,6 +8,7 @@ import {
   Get,
   UseGuards,
 } from '@nestjs/common';
+import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 import { PublishPolicyDto } from './dto/publish-policy.dto';
 import { PolicyPublishService } from './policy-publish.service';
 import {
@@ -111,24 +112,38 @@ class RuntimeUpdateResponseDto {
 
 class UpdateGlobalConfigDto {
   @ApiPropertyOptional({ description: 'Trust XFF (on/off->boolean)' })
+  @IsBoolean()
+  @IsOptional()
   trustXff?: boolean;
 
   @ApiPropertyOptional({ description: 'JSON Log Level' })
+  @IsString()
+  @IsOptional()
   logLevel?: string;
 
   @ApiPropertyOptional({ description: 'Dynamic Block Score Threshold' })
+  @IsNumber()
+  @IsOptional()
   dynamicBlockScore?: number;
 
   @ApiPropertyOptional({ description: 'Dynamic Block Duration (e.g. 30m)' })
+  @IsString()
+  @IsOptional()
   dynamicBlockDuration?: string;
 
   @ApiPropertyOptional({ description: 'Dynamic Block Window Size (e.g. 1m)' })
+  @IsString()
+  @IsOptional()
   dynamicBlockWindow?: string;
 
   @ApiPropertyOptional({ description: '变更备注' })
+  @IsString()
+  @IsOptional()
   note?: string;
 
   // Actor injected by controller usually, but here manual for simplicity
+  @IsString()
+  @IsOptional()
   actor?: string;
 }
 
@@ -150,6 +165,7 @@ export class RulesController {
   @Get('global/nginx-params')
   @Roles('admin')
   @ApiOperation({ summary: '获取全局 Nginx WAF 参数 (http级)', description: 'Trust XFF, Log Level, Dynamic Block Score' })
+  @ApiOkResponse({ type: UpdateGlobalConfigDto })
   async getGlobalConfig() {
     return this.publishService.getGlobalConfig();
   }

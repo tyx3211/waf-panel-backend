@@ -37,7 +37,7 @@ export class AttackBreakdownDto {
   count!: number;
 }
 
-export class GeoEntryDto {
+export class ReportGeoEntryDto {
   @ApiProperty({ description: '名称/编码', example: 'CN' })
   name!: string;
 
@@ -52,11 +52,11 @@ export class GeoSectionDto {
   @ApiProperty({ description: '范围：world | china', example: 'world' })
   scope!: 'world' | 'china';
 
-  @ApiProperty({ description: '热点数据', type: [GeoEntryDto] })
-  heatmap!: GeoEntryDto[];
+  @ApiProperty({ description: '热点数据', type: [ReportGeoEntryDto] })
+  heatmap!: ReportGeoEntryDto[];
 
-  @ApiProperty({ description: 'Top 榜单', type: [GeoEntryDto] })
-  top!: GeoEntryDto[];
+  @ApiProperty({ description: 'Top 榜单', type: [ReportGeoEntryDto] })
+  top!: ReportGeoEntryDto[];
 }
 
 export class ReportSectionDto {
@@ -97,32 +97,32 @@ export class WafReportSummaryDto {
 
   @ApiProperty({
     description: '高频 URL 榜单',
-    type: [GeoEntryDto],
+    type: [ReportGeoEntryDto],
     example: [
       { name: '/login', count: 120 },
       { name: '/api/upload', count: 35 },
     ],
   })
-  topUrls!: GeoEntryDto[];
+  topUrls!: ReportGeoEntryDto[];
 
   @ApiProperty({
     description: '高频攻击 IP 榜单',
-    type: [GeoEntryDto],
+    type: [ReportGeoEntryDto],
     example: [{ name: '1.1.1.1', count: 30 }],
   })
-  topAttackIps!: GeoEntryDto[];
+  topAttackIps!: ReportGeoEntryDto[];
 
   @ApiProperty({
     description: '高频拦截 URL 榜单',
-    type: [GeoEntryDto],
+    type: [ReportGeoEntryDto],
     example: [{ name: '/admin', count: 12 }],
   })
-  topBlockedUrls!: GeoEntryDto[];
+  topBlockedUrls!: ReportGeoEntryDto[];
 
   @ApiProperty({
     description: '高频拦截 IP 榜单',
-    type: [GeoEntryDto],
+    type: [ReportGeoEntryDto],
     example: [{ name: '2.2.2.2', count: 7 }],
   })
-  topBlockedIps!: GeoEntryDto[];
+  topBlockedIps!: ReportGeoEntryDto[];
 }

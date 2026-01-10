@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -156,5 +157,19 @@ export class TemplatesController {
     @Body() dto: RollbackTemplateDto,
   ) {
     return this.service.rollback(templateName, Number(versionNo), dto.actor);
+  }
+
+  @Delete(':templateName')
+  @Roles('admin')
+  @ApiOperation({
+    summary: '删除模板',
+    description: '删除模板的所有版本及文件。警告：如果被策略引用，可能导致 Nginx 加载失败。',
+  })
+  @ApiParam({
+    name: 'templateName',
+    description: '模板名称',
+  })
+  async delete(@Param('templateName') templateName: string) {
+    return this.service.delete(templateName, 'admin'); // TODO: get actor from token
   }
 }

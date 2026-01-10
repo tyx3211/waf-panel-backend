@@ -15,6 +15,7 @@ export type OpsActionType =
   | 'UPDATE_TEMPLATE'
   | 'RESTORE_CORE_FACTORY'
   | 'UPDATE_ALERT_CONFIG'
+  | 'UPDATE_GLOBAL_CONFIG'
   | 'SEND_ALERT';
 
 export type OpsStatus = 'SUCCESS' | 'FAILED';

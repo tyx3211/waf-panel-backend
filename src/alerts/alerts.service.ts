@@ -48,6 +48,7 @@ export class AlertsService {
 
   onModuleInit() {
     // Check metrics every minute
+    this.checkMetrics(); // Run immediately on startup
     this.checkInterval = setInterval(() => this.checkMetrics(), 60000);
   }
 
@@ -61,8 +62,9 @@ export class AlertsService {
     try {
       // 1. Get Config (without audit logging to reduce noise)
       const entity = await this.ensureConfig(this.configRepo);
+      // Only check cooldown against SYSTEM alerts, ignore manual tests
       const last = await this.logRepo.findOne({
-        where: {},
+        where: { actor: 'system-monitor' },
         order: { createdAt: 'DESC' },
       });
       const config = this.toDto(entity, last || undefined);

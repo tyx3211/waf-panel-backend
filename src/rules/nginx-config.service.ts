@@ -266,6 +266,8 @@ export class NginxConfigService {
     trustXff: boolean;
     logLevel: string;
     dynamicBlockScore: number;
+    dynamicBlockDuration: string;
+    dynamicBlockWindow: string;
   }> {
     const cfg = this.getCfg();
     const tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'waf-cp-getg-'));
@@ -353,7 +355,7 @@ export class NginxConfigService {
       setDirective('waf_trust_xff', [directives.trustXff ? 'on' : 'off']);
     }
     if (directives.logLevel !== undefined) {
-      setDirective('waf_json_log_level', [directives.logLevel]);
+      setDirective('waf_json_log_level', [directives.logLevel.toLowerCase()]);
     }
     if (directives.dynamicBlockScore !== undefined) {
       setDirective('waf_dynamic_block_score_threshold', [String(directives.dynamicBlockScore)]);

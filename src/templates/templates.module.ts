@@ -6,11 +6,14 @@ import { TemplatesController } from './templates.controller';
 import { LocksModule } from '../common/locks/locks.module';
 import { OpsAuditModule } from '../ops-audit/ops-audit.module';
 
+import { RulesModule } from '../rules/rules.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([TemplateRuleSetVersion]),
     LocksModule,
     OpsAuditModule,
+    RulesModule,
   ],
   providers: [TemplatesService],
   controllers: [TemplatesController],

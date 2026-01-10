@@ -28,6 +28,6 @@ import { TemplateRuleSetVersion } from '../entities/template-rule-set-version.en
     NginxConfigService,
   ],
   controllers: [RulesController],
-  exports: [PolicyPublishService],
+  exports: [PolicyPublishService, RulesFilesystemService],
 })
 export class RulesModule {}

@@ -9,6 +9,7 @@ import {
   sanitizeTemplateRules,
   RuleValidationError,
 } from '../common/rules/rules-validation';
+import { RulesFilesystemService } from '../rules/rules-filesystem.service';
 
 @Injectable()
 export class TemplatesService {
@@ -19,6 +20,7 @@ export class TemplatesService {
     private readonly repo: Repository<TemplateRuleSetVersion>,
     private readonly lock: AdvisoryLockService,
     private readonly audit: OpsAuditService,
+    private readonly files: RulesFilesystemService,
   ) {}
 
   async list(templateName?: string) {
@@ -36,10 +38,11 @@ export class TemplatesService {
     actor?: string,
   ) {
     return this.lock.withLock(templateLock(templateName), async () => {
+      const sanitized = sanitizeTemplateRules(templateName, rulesJson);
+      this.assertNoExtends(sanitized);
+
       return this.repo.manager.transaction(async (manager) => {
         const repo = manager.getRepository(TemplateRuleSetVersion);
-        const sanitized = sanitizeTemplateRules(templateName, rulesJson);
-        this.assertNoExtends(sanitized);
         const versionNo = await this.nextVersion(templateName, repo);
         const entity = repo.create({
           templateName,
@@ -50,6 +53,10 @@ export class TemplatesService {
           createdBy: actor,
         });
         const saved = await repo.save(entity);
+        
+        // Write to filesystem
+        this.files.writeTemplate(templateName, sanitized);
+
         await this.audit.logWithManager(manager, 'UPDATE_TEMPLATE', {
           targetType: 'template',
           targetName: templateName,
@@ -82,6 +89,10 @@ export class TemplatesService {
           createdBy: actor,
         });
         const saved = await repo.save(entity);
+
+        // Write to filesystem
+        this.files.writeTemplate(templateName, target.rulesJson as Record<string, unknown>);
+
         await this.audit.logWithManager(manager, 'UPDATE_TEMPLATE', {
           targetType: 'template',
           targetName: templateName,
@@ -115,5 +126,31 @@ export class TemplatesService {
     if (meta && meta['extends']) {
       throw new RuleValidationError('template is not allowed to use extends');
     }
+  }
+
+  async delete(templateName: string, actor?: string) {
+    return this.lock.withLock(templateLock(templateName), async () => {
+      return this.repo.manager.transaction(async (manager) => {
+        const repo = manager.getRepository(TemplateRuleSetVersion);
+        
+        // Delete all versions from DB
+        const result = await repo.delete({ templateName });
+        
+        // Delete file from disk
+        this.files.deleteTemplate(templateName);
+
+        await this.audit.logWithManager(manager, 'UPDATE_TEMPLATE', {
+          targetType: 'template',
+          targetName: templateName,
+          status: 'SUCCESS',
+          actor,
+          note: 'Deleted template',
+          detail: { affected: result.affected },
+        });
+
+        this.logger.log(`Template ${templateName} deleted (versions: ${result.affected})`);
+        return { deleted: true };
+      });
+    });
   }
 }

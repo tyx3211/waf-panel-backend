@@ -5,8 +5,32 @@ import {
   IsOptional,
   IsString,
   IsObject,
+  IsNumber,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import type { AlertThresholds } from './alerts.service';
+
+export class AlertThresholdsDto {
+  @ApiPropertyOptional({ description: '总拦截率阈值 (0.0 - 1.0)', example: 0.5 })
+  @IsNumber()
+  @IsOptional()
+  blockRate?: number;
+
+  @ApiPropertyOptional({ description: '总 QPS 阈值', example: 500 })
+  @IsNumber()
+  @IsOptional()
+  qps?: number;
+
+  @ApiPropertyOptional({
+    description: '特定攻击类型的拦截计数阈值',
+    additionalProperties: { type: 'number' },
+    example: { SQL_INJECTION: 50 },
+  })
+  @IsOptional()
+  @IsObject()
+  attackTypeCounts?: Record<string, number>;
+}
 
 export class UpdateAlertConfigDto {
   @ApiPropertyOptional({ description: '告警开关', default: true })
@@ -26,16 +50,12 @@ export class UpdateAlertConfigDto {
 
   @ApiPropertyOptional({
     description: '触发阈值（拦截率/QPS/攻击类型计数）',
-    type: Object,
-    example: {
-      blockRate: 0.5,
-      qps: 200,
-      attackTypeCounts: { SQL_INJECTION: 10 },
-    },
+    type: AlertThresholdsDto,
   })
   @IsOptional()
-  @IsObject()
-  thresholds?: AlertThresholds;
+  @ValidateNested()
+  @Type(() => AlertThresholdsDto)
+  thresholds?: AlertThresholdsDto;
 }
 
 export class SendAlertDto {
