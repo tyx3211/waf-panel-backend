@@ -17,7 +17,10 @@ async function bootstrap() {
       forbidUnknownValues: false,
     }),
   );
-  app.useGlobalInterceptors(new ResponseInterceptor(), new PerformanceInterceptor());
+  app.useGlobalInterceptors(
+    new ResponseInterceptor(),
+    new PerformanceInterceptor(),
+  );
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const config = new DocumentBuilder()

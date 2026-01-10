@@ -1135,6 +1135,219 @@
         ]
       }
     },
+    "/waf-metrics/summary": {
+      "get": {
+        "description": "返回指定时间范围内的请求总数、拦截总数、状态码分布及趋势点位数据。",
+        "operationId": "WafMetricsController_getSummary",
+        "parameters": [
+          {
+            "name": "range",
+            "required": true,
+            "in": "query",
+            "description": "查询时间范围",
+            "schema": {
+              "default": "1h",
+              "type": "string",
+              "enum": [
+                "5m",
+                "1h",
+                "24h",
+                "7d"
+              ]
+            }
+          },
+          {
+            "name": "mode",
+            "required": false,
+            "in": "query",
+            "description": "统计模式：访问量或拦截量",
+            "schema": {
+              "default": "visit",
+              "type": "string",
+              "enum": [
+                "visit",
+                "block"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WafSummaryResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取流量摘要和趋势图",
+        "tags": [
+          "实时指标"
+        ]
+      }
+    },
+    "/waf-metrics/top": {
+      "get": {
+        "description": "基于内存统计返回拦截量最高的 IP、URL 和攻击类型分布。",
+        "operationId": "WafMetricsController_getTop",
+        "parameters": [
+          {
+            "name": "range",
+            "required": true,
+            "in": "query",
+            "description": "查询时间范围",
+            "schema": {
+              "default": "1h",
+              "type": "string",
+              "enum": [
+                "5m",
+                "1h",
+                "24h",
+                "7d"
+              ]
+            }
+          },
+          {
+            "name": "mode",
+            "required": false,
+            "in": "query",
+            "description": "统计模式：访问量或拦截量",
+            "schema": {
+              "default": "visit",
+              "type": "string",
+              "enum": [
+                "visit",
+                "block"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WafTopResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取 Top 统计 (IP, URL, 攻击类型)",
+        "tags": [
+          "实时指标"
+        ]
+      }
+    },
+    "/waf-metrics/geo": {
+      "get": {
+        "description": "返回拦截和访问的全球/中国省级地理分布图表数据。",
+        "operationId": "WafMetricsController_getGeo",
+        "parameters": [
+          {
+            "name": "range",
+            "required": true,
+            "in": "query",
+            "description": "查询时间范围",
+            "schema": {
+              "default": "1h",
+              "type": "string",
+              "enum": [
+                "5m",
+                "1h",
+                "24h",
+                "7d"
+              ]
+            }
+          },
+          {
+            "name": "mode",
+            "required": false,
+            "in": "query",
+            "description": "统计模式：访问量或拦截量",
+            "schema": {
+              "default": "visit",
+              "type": "string",
+              "enum": [
+                "visit",
+                "block"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WafGeoResponseDto"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取地理位置分布统计",
+        "tags": [
+          "实时指标"
+        ]
+      }
+    },
     "/servers/{serverName}/versions": {
       "get": {
         "description": "按站点名称列出历史版本，便于对比与回滚。",
@@ -1400,6 +1613,36 @@
           }
         ],
         "summary": "修改运行态开关（wafEnabled/dynamicBlock/defaultAction），带锁与失败回滚",
+        "tags": [
+          "ServerPolicy"
+        ]
+      },
+      "get": {
+        "description": "通过 Crossplane 解析 nginx.conf，返回指定站点的 WAF 运行态开关状态。",
+        "operationId": "RulesController_getRuntime",
+        "parameters": [
+          {
+            "name": "serverName",
+            "required": true,
+            "in": "path",
+            "description": "站点名称（nginx server_name）",
+            "schema": {
+              "example": "example1.com",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "获取当前运行态配置（直接从 nginx.conf 读取）",
         "tags": [
           "ServerPolicy"
         ]
@@ -3098,6 +3341,161 @@
           "refreshToken"
         ]
       },
+      "MetricSummaryDto": {
+        "type": "object",
+        "properties": {
+          "req": {
+            "type": "number",
+            "description": "总请求"
+          },
+          "block": {
+            "type": "number",
+            "description": "拦截数"
+          },
+          "s4xx": {
+            "type": "number",
+            "description": "4xx 错误"
+          },
+          "s5xx": {
+            "type": "number",
+            "description": "5xx 错误"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "visit",
+              "block"
+            ],
+            "default": "visit",
+            "description": "统计模式：访问量或拦截量"
+          }
+        },
+        "required": [
+          "req",
+          "block",
+          "s4xx",
+          "s5xx"
+        ]
+      },
+      "MetricPointDto": {
+        "type": "object",
+        "properties": {
+          "ts": {
+            "type": "number",
+            "description": "时间戳 (毫秒)"
+          },
+          "req": {
+            "type": "number",
+            "description": "总请求数"
+          },
+          "block": {
+            "type": "number",
+            "description": "拦截数"
+          }
+        },
+        "required": [
+          "ts",
+          "req",
+          "block"
+        ]
+      },
+      "WafSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/MetricSummaryDto"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricPointDto"
+            }
+          }
+        },
+        "required": [
+          "summary",
+          "series"
+        ]
+      },
+      "TopEntryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "count"
+        ]
+      },
+      "WafTopResponseDto": {
+        "type": "object",
+        "properties": {
+          "topIps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopEntryDto"
+            }
+          },
+          "topUrls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopEntryDto"
+            }
+          },
+          "attackTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopEntryDto"
+            }
+          }
+        },
+        "required": [
+          "topIps",
+          "topUrls",
+          "attackTypes"
+        ]
+      },
+      "GeoEntryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ]
+      },
+      "WafGeoResponseDto": {
+        "type": "object",
+        "properties": {
+          "world": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          },
+          "china": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoEntryDto"
+            }
+          }
+        },
+        "required": [
+          "world",
+          "china"
+        ]
+      },
       "ServerPolicyVersionResponse": {
         "type": "object",
         "properties": {
@@ -3834,24 +4232,6 @@
         },
         "required": [
           "type",
-          "count"
-        ]
-      },
-      "GeoEntryDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "名称/编码",
-            "example": "CN"
-          },
-          "count": {
-            "type": "number",
-            "description": "数量"
-          }
-        },
-        "required": [
-          "name",
           "count"
         ]
       },

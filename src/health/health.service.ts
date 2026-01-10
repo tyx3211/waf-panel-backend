@@ -55,10 +55,10 @@ export class HealthService {
     // LokiService doesn't expose config directly, so we try a simple query
     try {
       const result = await this.lokiService.queryLogs({
-        query: '{job="test"} | limit 1',
-        start: String(Date.now() * 1e6 - 60e9), // last minute
-        end: String(Date.now() * 1e6),
-        limit: '1',
+        query: '{job="waf_logs"}',
+        start: Date.now() - 60000,
+        end: Date.now(),
+        limit: 1,
       });
       // If we get a result (even empty), Loki is reachable
       if (result.warnings?.length && result.warnings[0]?.includes('400')) {

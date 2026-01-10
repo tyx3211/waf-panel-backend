@@ -8,6 +8,7 @@ import { AlertSendLog } from '../entities/alert-send-log.entity';
 import { AlertMailService } from './alert-mail.service';
 import { AdvisoryLockService } from '../common/locks/advisory-lock.service';
 import { alertLock } from '../common/locks/lock-keys';
+import { WafMetricsService } from '../waf-metrics/waf-metrics.service';
 
 export interface AlertThresholds {
   blockRate?: number;
@@ -32,6 +33,8 @@ export interface AlertConfig {
 
 @Injectable()
 export class AlertsService {
+  private checkInterval: NodeJS.Timeout | null = null;
+
   constructor(
     private readonly audit: OpsAuditService,
     @InjectRepository(AlertConfigEntity)
@@ -40,7 +43,73 @@ export class AlertsService {
     private readonly logRepo: Repository<AlertSendLog>,
     private readonly mail: AlertMailService,
     private readonly lock: AdvisoryLockService,
+    private readonly metrics: WafMetricsService,
   ) {}
+
+  onModuleInit() {
+    // Check metrics every minute
+    this.checkInterval = setInterval(() => this.checkMetrics(), 60000);
+  }
+
+  onModuleDestroy() {
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval);
+    }
+  }
+
+  private async checkMetrics() {
+    try {
+      // 1. Get Config (without audit logging to reduce noise)
+      const entity = await this.ensureConfig(this.configRepo);
+      const last = await this.logRepo.findOne({
+        where: {},
+        order: { createdAt: 'DESC' },
+      });
+      const config = this.toDto(entity, last || undefined);
+
+      if (!config.enabled || !config.emails.length || !config.thresholds) return;
+
+      // 2. Cooldown check (default 10 minutes to avoid spam)
+      if (config.lastSendResult?.sentAt) {
+        const lastSent = new Date(config.lastSendResult.sentAt).getTime();
+        if (Date.now() - lastSent < 10 * 60 * 1000) return;
+      }
+
+      // 3. Get Metrics (Use 5m window for stability)
+      const { summary } = this.metrics.getSummary('5m');
+      // Calculate metrics
+      const currentQps = summary.req / 300;
+      const currentBlockRate = summary.req > 0 ? summary.block / summary.req : 0;
+
+      const reasons: string[] = [];
+      const t = config.thresholds;
+
+      if (t.qps && currentQps > t.qps) {
+        reasons.push(`QPS triggers alert: Current(${currentQps.toFixed(1)}) > Threshold(${t.qps})`);
+      }
+      if (t.blockRate && currentBlockRate > t.blockRate) {
+        reasons.push(
+          `Block Rate triggers alert: Current(${(currentBlockRate * 100).toFixed(1)}%) > Threshold(${(
+            t.blockRate * 100
+          ).toFixed(1)}%)`,
+        );
+      }
+
+      // 4. Send Alert
+      if (reasons.length > 0) {
+        const subject = `[WAF Alert] Traffic Anomaly Detected`;
+        const content = `Target: Web Application Firewall\nTime: ${new Date().toLocaleString()}\n\nIssues:\n${reasons.join(
+          '\n',
+        )}\n\nCurrent Status (Last 5m):\nTotal Requests: ${summary.req}\nBlocked Requests: ${
+          summary.block
+        }\n\nPlease check the dashboard for details.`;
+
+        await this.send({ subject, content }, 'system-monitor');
+      }
+    } catch (err) {
+      console.error('Error in checkMetrics:', err);
+    }
+  }
 
   private toDto(entity: AlertConfigEntity, last?: AlertSendLog): AlertConfig {
     return {

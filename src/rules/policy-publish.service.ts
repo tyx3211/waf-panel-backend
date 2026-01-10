@@ -72,7 +72,13 @@ export class PolicyPublishService {
   ) {}
 
   async listAllServers() {
-    return this.versions.listAllServerNames();
+    const dbList = await this.versions.listAllServerNames();
+    const nginxList = await this.nginxConfig.listServerNames();
+    return Array.from(new Set([...dbList, ...nginxList]));
+  }
+
+  async getRuntime(serverName: string) {
+    return this.nginxConfig.getServerRuntimeDirectives(serverName);
   }
 
   async publish(serverName: string, dto: PublishPolicyDto) {
@@ -348,27 +354,7 @@ export class PolicyPublishService {
 
   async updateRuntime(serverName: string, dto: UpdateRuntimeDto) {
     return this.locks.withLock(LOCK_GLOBAL_NGINX, async () => {
-      const latest = await this.versions.findLatest(serverName);
-      if (!latest) {
-        throw new Error(`no policy version found for server=${serverName}`);
-      }
-      const policy: PolicyDoc = { ...(latest.policyJson as PolicyDoc) };
-      policy.meta = policy.meta || { name: serverName };
-      policy.disableById = policy.disableById || [];
-      policy.disableByTag = policy.disableByTag || [];
-      policy.policies = policy.policies || {};
-      policy.policies.runtime = {
-        ...(policy.policies.runtime || {}),
-        ...(dto.wafEnabled === undefined ? {} : { wafEnabled: dto.wafEnabled }),
-        ...(dto.dynamicBlockEnabled === undefined
-          ? {}
-          : { dynamicBlockEnabled: dto.dynamicBlockEnabled }),
-        ...(dto.defaultAction === undefined
-          ? {}
-          : { defaultAction: dto.defaultAction }),
-      };
-
-      const logLines: string[] = ['runtime update'];
+      const logLines: string[] = ['runtime update (direct nginx directive)'];
       const actor = dto.actor;
       const steps: PipelineStepResult[] = [];
       const rollbackSteps: PipelineStepResult[] = [];
@@ -376,22 +362,24 @@ export class PolicyPublishService {
       let targetConfPath: string | undefined;
 
       try {
-        steps.push(stepPending('writePolicyFile'));
-        const { path: policyPath } = this.files.writePolicy(serverName, policy);
-        logLines.push(`policy runtime updated: ${policyPath}`);
-        markStepOk(steps, 'writePolicyFile', { message: policyPath });
-
         steps.push(stepPending('updateNginxConf'));
-        const cfgRes = await this.nginxConfig.updateServerRulesJson(
+
+        // Directly update nginx.conf directives - NO version system involved
+        const cfgRes = await this.nginxConfig.updateServerRuntimeDirectives(
           serverName,
-          policyPath,
+          {
+            waf: dto.wafEnabled,
+            dynamicBlock: dto.dynamicBlockEnabled,
+            defaultAction: dto.defaultAction
+          }
         );
+        
         backupPath = cfgRes.backupPath;
         targetConfPath = cfgRes.targetPath;
         logLines.push(
-          `nginx.conf updated (backup=${cfgRes.backupPath ?? 'none'})`,
+          `nginx.conf directives updated (backup=${cfgRes.backupPath ?? 'none'})`,
         );
-        markStepOk(steps, 'updateNginxConf', { message: cfgRes.targetPath });
+        markStepOk(steps, 'updateNginxConf', { message: 'Updated directives in nginx.conf' });
 
         steps.push(stepPending('nginxTest'));
         const testRes = await this.nginx.testConfig();
@@ -406,16 +394,6 @@ export class PolicyPublishService {
         logLines.push(`nginx reload: ${reloadOut}`);
 
         const publishLog = this.joinLogs(logLines);
-        const saved = await this.versions.createVersion({
-          serverName,
-          policyJson: policy,
-          enabledCoreRules: latest.enabledCoreRules,
-          enabledTemplates: latest.enabledTemplates,
-          note: dto.note ?? latest.note,
-          actor,
-          status: 'SUCCESS',
-          publishLog,
-        });
 
         await this.audit.log('TOGGLE_WAF', {
           targetType: 'server',
@@ -424,15 +402,15 @@ export class PolicyPublishService {
           actor,
           note: dto.note,
           detail: {
-            versionNo: saved.versionNo,
-            runtime: policy.policies.runtime,
+            wafEnabled: dto.wafEnabled,
+            dynamicBlockEnabled: dto.dynamicBlockEnabled,
+            defaultAction: dto.defaultAction,
             steps,
           },
         });
 
         return {
           status: 'SUCCESS',
-          version: saved.versionNo,
           publishLog,
           steps,
           rollbackSteps,
@@ -447,7 +425,9 @@ export class PolicyPublishService {
           actor,
           note: dto.note,
           detail: {
-            runtime: policy.policies?.runtime,
+            wafEnabled: dto.wafEnabled,
+            dynamicBlockEnabled: dto.dynamicBlockEnabled,
+            defaultAction: dto.defaultAction,
             steps,
             rollbackSteps,
             error: message,
@@ -524,6 +504,88 @@ export class PolicyPublishService {
       note: `rollback to v1.${versionNo}`,
       actor,
       dryRun: false,
+    });
+  }
+  async getGlobalConfig() {
+    return this.nginxConfig.getGlobalRuntimeDirectives();
+  }
+
+  async updateGlobalConfig(
+    dto: { 
+      trustXff?: boolean; 
+      logLevel?: string; 
+      dynamicBlockScore?: number; 
+      dynamicBlockDuration?: string;
+      dynamicBlockWindow?: string;
+      note?: string; 
+      actor?: string 
+    },
+  ) {
+    return this.locks.withLock(LOCK_GLOBAL_NGINX, async () => {
+      const logLines: string[] = ['global config update'];
+      const steps: PipelineStepResult[] = [];
+      const rollbackSteps: PipelineStepResult[] = [];
+      let backupPath: string | undefined;
+      let targetConfPath: string | undefined;
+
+      try {
+        steps.push(stepPending('updateNginxConf'));
+        const cfgRes = await this.nginxConfig.updateGlobalRuntimeDirectives({
+          trustXff: dto.trustXff,
+          logLevel: dto.logLevel,
+          dynamicBlockScore: dto.dynamicBlockScore,
+          dynamicBlockDuration: dto.dynamicBlockDuration,
+          dynamicBlockWindow: dto.dynamicBlockWindow
+        });
+        
+        backupPath = cfgRes.backupPath;
+        targetConfPath = cfgRes.targetPath;
+        logLines.push(`global config updated (backup=${cfgRes.backupPath ?? 'none'})`);
+        markStepOk(steps, 'updateNginxConf', { message: 'Updated global directives' });
+
+        steps.push(stepPending('nginxTest'));
+        const testRes = await this.nginx.testConfig();
+        const testOut = trimLog(testRes.stderr || testRes.stdout);
+        markStepWarnOrOk(steps, 'nginxTest', testOut);
+        logLines.push(`nginx -t: ${testOut}`);
+
+        steps.push(stepPending('nginxReload'));
+        const reloadRes = await this.nginx.reload();
+        const reloadOut = trimLog(reloadRes.stderr || reloadRes.stdout);
+        markStepWarnOrOk(steps, 'nginxReload', reloadOut);
+        logLines.push(`nginx reload: ${reloadOut}`);
+
+        const publishLog = this.joinLogs(logLines);
+
+        await this.audit.log('UPDATE_GLOBAL_CONFIG', {
+          targetType: 'system',
+          targetName: 'global',
+          status: 'SUCCESS',
+          actor: dto.actor,
+          note: dto.note,
+          detail: {
+            config: dto,
+            steps
+          },
+        });
+
+        return { status: 'SUCCESS', publishLog, steps };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const failedLog = this.joinLogs([...logLines, `error: ${message}`]);
+        
+        if (backupPath && targetConfPath) {
+          await this.nginxConfig.restoreBackup(backupPath, targetConfPath);
+          rollbackSteps.push({
+            key: 'restoreNginxConf',
+            status: 'WARN',
+            message: `restored from ${backupPath}`,
+          });
+        }
+        
+        markFailureAtLastPending(steps, message);
+        return { status: 'FAILED', error: message, publishLog: failedLog, steps, rollbackSteps };
+      }
     });
   }
 }

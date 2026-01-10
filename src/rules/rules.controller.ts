@@ -109,6 +109,29 @@ class RuntimeUpdateResponseDto {
   error?: string;
 }
 
+class UpdateGlobalConfigDto {
+  @ApiPropertyOptional({ description: 'Trust XFF (on/off->boolean)' })
+  trustXff?: boolean;
+
+  @ApiPropertyOptional({ description: 'JSON Log Level' })
+  logLevel?: string;
+
+  @ApiPropertyOptional({ description: 'Dynamic Block Score Threshold' })
+  dynamicBlockScore?: number;
+
+  @ApiPropertyOptional({ description: 'Dynamic Block Duration (e.g. 30m)' })
+  dynamicBlockDuration?: string;
+
+  @ApiPropertyOptional({ description: 'Dynamic Block Window Size (e.g. 1m)' })
+  dynamicBlockWindow?: string;
+
+  @ApiPropertyOptional({ description: '变更备注' })
+  note?: string;
+
+  // Actor injected by controller usually, but here manual for simplicity
+  actor?: string;
+}
+
 @ApiTags('ServerPolicy')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -122,6 +145,21 @@ export class RulesController {
   @ApiOkResponse({ description: 'Server Names', type: [String] })
   async listServers() {
     return this.publishService.listAllServers();
+  }
+
+  @Get('global/nginx-params')
+  @Roles('admin')
+  @ApiOperation({ summary: '获取全局 Nginx WAF 参数 (http级)', description: 'Trust XFF, Log Level, Dynamic Block Score' })
+  async getGlobalConfig() {
+    return this.publishService.getGlobalConfig();
+  }
+
+  @Put('global/nginx-params')
+  @HttpCode(200)
+  @Roles('admin')
+  @ApiOperation({ summary: '更新全局 Nginx WAF 参数', description: '修改 http 块内的 WAF 指令并 reload' })
+  async updateGlobalConfig(@Body() dto: UpdateGlobalConfigDto) {
+    return this.publishService.updateGlobalConfig(dto);
   }
 
   @Post(':serverName/publish')
@@ -173,4 +211,24 @@ export class RulesController {
   ) {
     return this.publishService.updateRuntime(serverName, dto);
   }
+
+
+
+  @Get(':serverName/runtime')
+  @Roles('admin')
+  // ... (existing getRuntime content)
+  @ApiOperation({
+    summary: '获取当前运行态配置（直接从 nginx.conf 读取）',
+    description: '通过 Crossplane 解析 nginx.conf，返回指定站点的 WAF 运行态开关状态。',
+  })
+  @ApiParam({
+    name: 'serverName',
+    description: '站点名称（nginx server_name）',
+    example: 'example1.com',
+  })
+  async getRuntime(@Param('serverName') serverName: string) {
+    return this.publishService.getRuntime(serverName);
+  }
 }
+
+

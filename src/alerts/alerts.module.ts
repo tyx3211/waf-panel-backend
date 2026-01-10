@@ -9,6 +9,7 @@ import { AlertConfigEntity } from '../entities/alert-config.entity';
 import { AlertSendLog } from '../entities/alert-send-log.entity';
 import { AlertMailService } from './alert-mail.service';
 import { LocksModule } from '../common/locks/locks.module';
+import { WafMetricsModule } from '../waf-metrics/waf-metrics.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { LocksModule } from '../common/locks/locks.module';
     CommonModule,
     OpsAuditModule,
     LocksModule,
+    WafMetricsModule,
     TypeOrmModule.forFeature([AlertConfigEntity, AlertSendLog]),
   ],
   controllers: [AlertsController],

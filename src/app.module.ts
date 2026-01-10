@@ -22,6 +22,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { UsersController } from './users/users.controller';
 import { CommonModule } from './common/common.module';
 import smtpConfig from './config/smtp.config';
+import { WafMetricsModule } from './waf-metrics/waf-metrics.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import smtpConfig from './config/smtp.config';
     RulesModule,
     LokiModule,
     ReportsModule,
+    WafMetricsModule,
     AuthModule,
     AlertsModule,
     CommonModule,

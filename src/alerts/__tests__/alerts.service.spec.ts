@@ -6,6 +6,7 @@ import { OpsAuditLog } from '../../entities/ops-audit-log.entity';
 import { AdvisoryLockService } from '../../common/locks/advisory-lock.service';
 import { AlertConfigEntity } from '../../entities/alert-config.entity';
 import { AlertSendLog } from '../../entities/alert-send-log.entity';
+import { WafMetricsService } from '../../waf-metrics/waf-metrics.service';
 
 function createRepo<T extends { id?: number }>() {
   const store: T[] = [];
@@ -56,6 +57,11 @@ describe('AlertsService', () => {
   const mail = {
     send: jest.fn().mockResolvedValue({ sent: true }),
   };
+  const metrics = {
+    getSummary: jest.fn(),
+    getTopStats: jest.fn(),
+    getGeoStats: jest.fn(),
+  } as unknown as WafMetricsService;
 
   beforeEach(() => {
     auditLogWithManager.mockClear();
@@ -69,6 +75,7 @@ describe('AlertsService', () => {
       logRepo,
       mail as unknown as AlertMailService,
       lock,
+      metrics,
     );
     const updated = await svc.updateConfig(
       {
@@ -99,6 +106,7 @@ describe('AlertsService', () => {
       logRepo,
       mail as unknown as AlertMailService,
       lock,
+      metrics,
     );
     await svc.updateConfig(
       { enabled: true, emails: ['ops@example.com'] },
@@ -127,6 +135,7 @@ describe('AlertsService', () => {
       logRepo,
       mail as unknown as AlertMailService,
       lock,
+      metrics,
     );
     await svc.updateConfig({ enabled: false, emails: [] }, 'admin');
     const result = await svc.send({ subject: 'test' }, 'admin');

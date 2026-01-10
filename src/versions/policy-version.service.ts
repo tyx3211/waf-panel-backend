@@ -157,6 +157,21 @@ export class PolicyVersionService {
     });
   }
 
+  async updateLatest(
+    serverName: string,
+    updates: Partial<ServerPolicyVersion>,
+  ): Promise<ServerPolicyVersion | null> {
+    return this.lock.withLock(serverLock(serverName), async () => {
+      const latest = await this.repo.findOne({
+        where: { serverName },
+        order: { versionNo: 'DESC' },
+      });
+      if (!latest) return null;
+      Object.assign(latest, updates);
+      return this.repo.save(latest);
+    });
+  }
+
   private async nextVersionNo(
     serverName: string,
     repo: Repository<ServerPolicyVersion> = this.repo,

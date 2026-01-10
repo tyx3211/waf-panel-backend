@@ -40,7 +40,8 @@ export class LokiController {
     type: LokiLogsResponseDto,
   })
   async getWafLogs(@Query() q: WafLogsQueryDto): Promise<LokiLogsResponseDto> {
-    return this.loki.queryWafLogs(q);
+    const res = await this.loki.queryWafLogs(q);
+    return res.data as unknown as LokiLogsResponseDto;
   }
 
   @Get('waf/stats')
@@ -88,7 +89,14 @@ export class LokiController {
   async getAccessTimeseries(
     @Query() q: BaseLokiQueryDto,
   ): Promise<AccessTimeseriesResponseDto> {
-    return this.loki.queryAccessTimeseries(q);
+    const res = await this.loki.queryAccessTimeseries(q);
+    return {
+      ...res,
+      points: res.points.map((p) => ({
+        ...p,
+        ts: new Date(p.ts).toISOString(),
+      })),
+    };
   }
 
   @Get('geo/world')

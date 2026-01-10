@@ -5,7 +5,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class BaseLokiQueryDto {
   @ApiProperty({ description: '时间范围，如 5m/1h/24h', example: '1h' })
   @IsString()
-  timeRange!: string; // e.g. 5m,1h,24h
+  timeRange!: string;
 
   @ApiPropertyOptional({
     description: '过滤的 serverName',
@@ -74,4 +74,68 @@ export class GeoModeQueryDto extends BaseLokiQueryDto {
   })
   @IsEnum(['visit', 'block'])
   mode!: 'visit' | 'block';
+}
+
+// --- 缺失的响应 DTO ---
+
+export class WafStatsResponseDto {
+  @ApiProperty()
+  summary!: {
+    requests: number;
+    blocks: number;
+    blockRate: number;
+    uniqueIps: number;
+    attackIps: number;
+    dynamicBlocks: number;
+    blacklistHits: number;
+  };
+  @ApiProperty()
+  byAttackType!: Array<{ type: string; count: number }>;
+  @ApiProperty()
+  byAction!: Array<{ action: string; count: number }>;
+  @ApiPropertyOptional()
+  warnings?: string[];
+}
+
+export class AccessStatsResponseDto {
+  @ApiProperty()
+  summary!: {
+    requests: number;
+    blocks: number;
+    uniqueIps: number;
+    status4xx: number;
+    status5xx: number;
+    qpsAvg: number;
+  };
+  @ApiProperty()
+  byHost!: Array<{ host: string; requests: number; blocks: number }>;
+  @ApiProperty()
+  byUpstreamStatus!: Array<{ status: string; count: number }>;
+  @ApiProperty()
+  reqLen!: { avg: number; p95: number; max: number };
+  @ApiProperty()
+  upRt!: { avg: number; p95: number; max: number };
+}
+
+export class AccessTimeseriesResponseDto {
+  @ApiProperty()
+  intervalSeconds!: number;
+  @ApiProperty()
+  points!: Array<{
+    ts: number;
+    requests: number;
+    blocks: number;
+    latency: number;
+  }>;
+}
+
+export class GeoStatsResponseDto {
+  @ApiProperty()
+  mode!: 'visit' | 'block';
+  @ApiProperty()
+  scope!: 'world' | 'china';
+  @ApiProperty()
+  heatmap!: Array<{ code: string; count: number }>;
+  @ApiProperty()
+  top!: Array<{ name: string; count: number }>;
 }
