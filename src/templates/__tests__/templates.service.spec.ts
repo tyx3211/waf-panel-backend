@@ -77,10 +77,17 @@ describe('TemplatesService', () => {
         auditCalls.push({ action, payload }),
       ),
     } as unknown as OpsAuditService;
+    // Mock RulesFilesystemService
+    const files = {
+      writeTemplate: jest.fn(),
+      deleteTemplate: jest.fn(),
+    } as any;
+
     service = new TemplatesService(
       repo as unknown as Repository<TemplateRuleSetVersion>,
-      lock,
+      lock, // Assuming 'notify' was a typo and 'lock' should remain
       audit,
+      files,
     );
   });
 
