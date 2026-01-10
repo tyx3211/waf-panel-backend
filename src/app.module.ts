@@ -24,11 +24,18 @@ import { CommonModule } from './common/common.module';
 import smtpConfig from './config/smtp.config';
 import { WafMetricsModule } from './waf-metrics/waf-metrics.module';
 
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [databaseConfig, wafConfig, lokiConfig, jwtConfig, smtpConfig],
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'client'),
+      exclude: ['/api/(.*)'],
     }),
     DatabaseModule,
     LocksModule,

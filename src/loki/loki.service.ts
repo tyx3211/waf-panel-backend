@@ -126,10 +126,11 @@ export class LokiService {
     const queryMap = {
       req: `sum(count_over_time(${selector}[${range}]))`,
       block: `sum(count_over_time(${blockSelector}[${range}]))`,
-      type: `topk(10, sum by (finalActionType) (count_over_time(${selector}[${range}])))`,
-      action: `topk(10, sum by (finalAction) (count_over_time(${selector}[${range}])))`,
-      uniqueIp: `topk(100, sum by (clientIp) (count_over_time(${selector}[${range}])))`,
-      attackIp: `topk(100, sum by (clientIp) (count_over_time(${blockSelector}[${range}])))`,
+      // 这里的 finalActionType 现在是提取字段，需要在 count_over_time 内部流选择器中解析
+      type: `topk(10, sum by (finalActionType) (count_over_time(${selector} | json [${range}])))`,
+      action: `topk(10, sum by (finalAction) (count_over_time(${selector}[${range}])))`, // finalAction 仍是 label
+      uniqueIp: `topk(100, sum by (clientIp) (count_over_time(${selector} | json [${range}])))`,
+      attackIp: `topk(100, sum by (clientIp) (count_over_time(${blockSelector} | json [${range}])))`,
     };
 
     const time = Math.floor(end).toString();
@@ -137,10 +138,10 @@ export class LokiService {
       await Promise.all([
         this.queryInstant({ query: queryMap.req, time }),
         this.queryInstant({ query: queryMap.block, time }),
-        this.queryInstant({ query: queryMap.type, time }),
+        this.queryInstant({ query: queryMap.type, time }), // typeRes 使用新 LogQL
         this.queryInstant({ query: queryMap.action, time }),
-        this.queryInstant({ query: queryMap.uniqueIp, time }),
-        this.queryInstant({ query: queryMap.attackIp, time }),
+        this.queryInstant({ query: queryMap.uniqueIp, time }), // uniqueIpRes 使用新 LogQL
+        this.queryInstant({ query: queryMap.attackIp, time }), // attackIpRes 使用新 LogQL
       ]);
 
     const requests = this.getVectorValue(reqRes);
@@ -326,7 +327,7 @@ export class LokiService {
     );
 
     const res = await this.queryInstant({
-      query: `topk(${n}, sum by (${field}) (count_over_time(${selector}[${range}]))`,
+      query: `topk(${n}, sum by (${field}) (count_over_time(${selector} | json [${range}])))`,
       time: end.toString(),
     });
     return this.getVectorSeries(res, field);

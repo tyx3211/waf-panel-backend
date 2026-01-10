@@ -5,16 +5,25 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
+import { join } from 'path';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
+
+      // SPA Fallback: Redirect 404s on non-API routes to index.html
+      if (status === HttpStatus.NOT_FOUND && !request.path.startsWith('/api')) {
+        response.sendFile(join(process.cwd(), 'client', 'index.html'));
+        return;
+      }
+
       const res = exception.getResponse();
       const message =
         typeof res === 'string'
