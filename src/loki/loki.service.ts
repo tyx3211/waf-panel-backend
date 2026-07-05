@@ -62,19 +62,27 @@ export class LokiService {
     start?: number;
     end?: number;
   }): Promise<LokiResult<LokiRangeData>> {
+    if (!this.client) {
+      return this.emptyLokiResult('loki url is not configured');
+    }
+
     const query = params.query || `{job="${this.jobWaf()}"}`;
-    const res = await this.client!.get<LokiResult<LokiRangeData>>(
-      '/loki/api/v1/query_range',
-      {
-        params: {
-          query,
-          limit: params.limit || 100,
-          start: params.start ? Math.floor(params.start * 1e6) : undefined,
-          end: params.end ? Math.floor(params.end * 1e6) : undefined,
+    try {
+      const res = await this.client.get<LokiResult<LokiRangeData>>(
+        '/loki/api/v1/query_range',
+        {
+          params: {
+            query,
+            limit: params.limit || 100,
+            start: params.start ? Math.floor(params.start * 1e6) : undefined,
+            end: params.end ? Math.floor(params.end * 1e6) : undefined,
+          },
         },
-      },
-    );
-    return res.data;
+      );
+      return res.data;
+    } catch (err) {
+      return this.emptyLokiResult(this.formatLokiWarning(err));
+    }
   }
 
   async queryWafLogs(q: WafLogsQueryDto): Promise<LokiResult<LokiRangeData>> {
@@ -362,11 +370,19 @@ export class LokiService {
     query: string;
     time: string;
   }): Promise<LokiResult<LokiRangeData>> {
-    const res = await this.client!.get<LokiResult<LokiRangeData>>(
-      '/loki/api/v1/query',
-      { params },
-    );
-    return res.data;
+    if (!this.client) {
+      return this.emptyLokiResult('loki url is not configured');
+    }
+
+    try {
+      const res = await this.client.get<LokiResult<LokiRangeData>>(
+        '/loki/api/v1/query',
+        { params },
+      );
+      return res.data;
+    } catch (err) {
+      return this.emptyLokiResult(this.formatLokiWarning(err));
+    }
   }
 
   private async queryRange(params: {
@@ -376,18 +392,39 @@ export class LokiService {
     end: number;
     step?: string;
   }): Promise<LokiResult<LokiRangeData>> {
+    if (!this.client) {
+      return this.emptyLokiResult('loki url is not configured');
+    }
+
     const { start, end, ...other } = params;
-    const res = await this.client!.get<LokiResult<LokiRangeData>>(
-      '/loki/api/v1/query_range',
-      {
-        params: {
-          ...other,
-          start: Math.floor(start * 1e9),
-          end: Math.floor(end * 1e9),
+    try {
+      const res = await this.client.get<LokiResult<LokiRangeData>>(
+        '/loki/api/v1/query_range',
+        {
+          params: {
+            ...other,
+            start: Math.floor(start * 1e9),
+            end: Math.floor(end * 1e9),
+          },
         },
-      },
-    );
-    return res.data;
+      );
+      return res.data;
+    } catch (err) {
+      return this.emptyLokiResult(this.formatLokiWarning(err));
+    }
+  }
+
+  private emptyLokiResult(warning?: string): LokiResult<LokiRangeData> {
+    return {
+      data: { resultType: 'streams', result: [] },
+      ...(warning ? { warnings: [warning] } : {}),
+    };
+  }
+
+  private formatLokiWarning(err: unknown): string {
+    const message = err instanceof Error ? err.message : String(err);
+    this.logger.warn(`loki query failed: ${message}`);
+    return message;
   }
 
   private getVectorValue(res: LokiResult<LokiRangeData>): number {
