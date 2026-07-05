@@ -21,19 +21,44 @@ Nginx WAF 控制面后端，基于 **NestJS + TypeORM + PostgreSQL** 实现。�
 
 ## 架构位置
 
+本仓库位于 WAF 系统的控制面。它不在用户请求的转发路径上，而是负责把管理员操作转换为数据面可加载的 Nginx 配置和 JSON 规则文件；真正处理 HTTP 流量的是 Nginx Worker 内的 [`nginx-http-waf-module-v2`](https://github.com/tyx3211/nginx-http-waf-module-v2) C 模块。
+
 ```text
-Vue 控制台
-    |
-    |  /api/v1
-    v
+                         管理流
+管理员 / 浏览器
+      |
+      |  Vue 控制台  ->  /api/v1
+      v
 NestJS Backend
-    |-- PostgreSQL: 用户、版本、审计、告警配置
-    |-- WAF_RULES_DIR: 生成和读取 JSON 规则文件
-    |-- crossplane: 解析/重写 nginx.conf
-    |-- nginx -t / reload: 配置校验与热加载
-    |-- Loki: 查询访问日志和 WAF JSONL 审计日志
-    `-- SMTP: 可选告警通道
+      |-- PostgreSQL: 用户、版本、操作审计、告警配置
+      |-- WAF_RULES_DIR: 生成当前生效的 JSON 规则投影
+      |-- crossplane: 对 nginx.conf 做 AST 级定点修改
+      |-- nginx -t / reload: 发布前校验并触发热加载
+      `-- SMTP: 可选告警通道
+                    |
+                    |  文件系统 + SIGHUP
+                    v
+              Nginx Master / Workers
+                    |
+                    |  加载 .so 动态模块与 JSON 规则快照
+                    v
+        nginx-http-waf-module-v2 (C 数据面内核)
+                    |-- yyjson: 递归加载 extends / rewrite / 去重规则
+                    |-- Compiler: 生成只读内存快照、分桶索引、PCRE JIT
+                    |-- ACCESS_PHASE: IP / 动态信誉 / URI / Detect 五阶段检测
+                    |-- Shared Memory: 跨 worker 动态信誉与临时封禁
+                    `-- JSONL Logs: access_waf.jsonl / waf.jsonl
+                    ^
+                    |
+客户端 HTTP 流量  ----+---->  合法请求继续进入 upstream / static
+
+                         观测流
+Nginx JSONL Logs
+      |-- Promtail -> Loki -> NestJS Backend -> Vue 日志检索 / 报表
+      `-- tail -F  -> WafMetricsService -> Vue 实时大屏 / TopN / 地理分布
 ```
+
+这套结构遵循控制面 / 数据面分离：控制面负责规则编排、版本化、发布事务和可观测查询；数据面负责在请求路径内完成低延迟检测与拦截。即使控制面短暂停止，Nginx WAF 模块仍可继续使用最后一次成功加载的规则执行防护。
 
 ## 快速启动
 
